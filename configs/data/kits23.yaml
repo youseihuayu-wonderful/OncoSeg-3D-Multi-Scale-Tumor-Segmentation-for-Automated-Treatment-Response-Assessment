@@ -1,0 +1,21 @@
+name: kits23
+root_dir: data/raw/kits23
+roi_size: [128, 128, 128]
+pixdim: [1.0, 1.0, 1.0]
+cache_rate: 0.1
+num_workers: 4
+
+# KiTS23 label mapping
+num_classes: 4
+class_names:
+  - background
+  - kidney
+  - tumor
+  - cyst
+
+# Evaluation regions
+regions:
+  Kidney: [1]
+  Tumor: [2]
+  Cyst: [3]
+  Kidney_and_Tumor: [1, 2]

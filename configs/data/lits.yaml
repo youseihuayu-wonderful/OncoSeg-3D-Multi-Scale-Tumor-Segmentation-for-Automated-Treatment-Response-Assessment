@@ -1,0 +1,19 @@
+name: lits
+root_dir: data/raw/lits
+roi_size: [128, 128, 128]
+pixdim: [1.0, 1.0, 1.0]
+cache_rate: 0.1
+num_workers: 4
+
+# LiTS label mapping
+num_classes: 3
+class_names:
+  - background
+  - liver
+  - tumor
+
+# Evaluation regions
+regions:
+  Liver: [1]
+  Tumor: [2]
+  Liver_and_Tumor: [1, 2]
