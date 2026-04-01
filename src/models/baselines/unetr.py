@@ -1,7 +1,7 @@
 """UNETR baseline (Hatamizadeh et al., 2022)."""
 
 import torch.nn as nn
-from monai.networks.nets import UNETR as MonaiUNETR
+from monai.networks.nets import UNETR as _MonaiUNETR
 
 
 class UNETR(nn.Module):
@@ -19,7 +19,7 @@ class UNETR(nn.Module):
     ):
         super().__init__()
 
-        self.model = MonaiUNETR(
+        self.model = _MonaiUNETR(
             in_channels=in_channels,
             out_channels=num_classes,
             img_size=img_size,

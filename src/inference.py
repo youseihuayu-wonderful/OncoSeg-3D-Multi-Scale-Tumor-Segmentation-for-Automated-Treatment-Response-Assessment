@@ -20,11 +20,11 @@ from monai.inferers import sliding_window_inference
 from monai.transforms import (
     Compose,
     EnsureChannelFirstd,
+    EnsureTyped,
     LoadImaged,
     NormalizeIntensityd,
     Orientationd,
     Spacingd,
-    EnsureTyped,
 )
 from omegaconf import DictConfig
 from tqdm import tqdm
@@ -249,9 +249,9 @@ class Predictor:
             outputs["recist"] = {
                 "num_lesions": len(lesions),
                 "sum_longest_diameter_mm": sum(
-                    l["longest_diameter_mm"] for l in lesions
+                    les["longest_diameter_mm"] for les in lesions
                 ),
-                "total_volume_mm3": sum(l["volume_mm3"] for l in lesions),
+                "total_volume_mm3": sum(les["volume_mm3"] for les in lesions),
                 "lesions": lesions,
             }
 

@@ -5,8 +5,8 @@ from pathlib import Path
 import numpy as np
 
 try:
-    import matplotlib.pyplot as plt
     import matplotlib
+    import matplotlib.pyplot as plt
     matplotlib.rcParams.update({
         "font.size": 12,
         "axes.titlesize": 14,

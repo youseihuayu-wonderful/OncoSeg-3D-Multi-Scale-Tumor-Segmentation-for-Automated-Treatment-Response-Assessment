@@ -1,14 +1,12 @@
 """Unit tests for the analysis toolkit."""
 
 import json
-import tempfile
-from pathlib import Path
 
 import numpy as np
 import pytest
 
-from src.analysis.result_analyzer import ResultAnalyzer
 from src.analysis.failure_analyzer import FailureAnalyzer
+from src.analysis.result_analyzer import ResultAnalyzer
 
 
 class TestResultAnalyzer:
@@ -101,8 +99,6 @@ class TestFailureAnalyzer:
     @pytest.fixture
     def analyzer(self):
         fa = FailureAnalyzer(dice_threshold=0.5)
-
-        rng = np.random.RandomState(42)
 
         # Add subjects with varying tumor sizes and performance
         # Small tumor, low dice (failure case)

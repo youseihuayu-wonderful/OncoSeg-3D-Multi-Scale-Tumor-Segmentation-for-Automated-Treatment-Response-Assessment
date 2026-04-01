@@ -56,11 +56,11 @@ class ResponseClassifier:
         baseline_lesions = self.measurer.measure_lesions(baseline_mask, pixdim)
         followup_lesions = self.measurer.measure_lesions(followup_mask, pixdim)
 
-        baseline_sum_ld = sum(l["longest_diameter_mm"] for l in baseline_lesions)
-        followup_sum_ld = sum(l["longest_diameter_mm"] for l in followup_lesions)
+        baseline_sum_ld = sum(les["longest_diameter_mm"] for les in baseline_lesions)
+        followup_sum_ld = sum(les["longest_diameter_mm"] for les in followup_lesions)
 
-        baseline_vol = sum(l["volume_mm3"] for l in baseline_lesions)
-        followup_vol = sum(l["volume_mm3"] for l in followup_lesions)
+        baseline_vol = sum(les["volume_mm3"] for les in baseline_lesions)
+        followup_vol = sum(les["volume_mm3"] for les in followup_lesions)
 
         # Percent change in sum of longest diameters
         if baseline_sum_ld > 0:

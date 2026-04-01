@@ -1,6 +1,5 @@
 """Unit tests for model sub-modules."""
 
-import pytest
 import torch
 
 

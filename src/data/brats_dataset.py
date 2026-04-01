@@ -2,8 +2,7 @@
 
 from pathlib import Path
 
-import torch
-from monai.data import Dataset, CacheDataset
+from monai.data import CacheDataset, Dataset
 from monai.transforms import Compose
 
 

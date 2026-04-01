@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from src.response.classifier import ResponseClassifier, ResponseCategory
+from src.response.classifier import ResponseCategory, ResponseClassifier
 from src.response.recist import RECISTMeasurer
 
 

@@ -6,19 +6,19 @@ unlike BraTS 2023 which uses separate files per modality.
 
 from monai.transforms import (
     Compose,
-    LoadImaged,
-    EnsureChannelFirstd,
     ConvertToMultiChannelBasedOnBratsClassesd,
     CropForegroundd,
-    RandSpatialCropd,
+    EnsureChannelFirstd,
+    EnsureTyped,
+    LoadImaged,
+    NormalizeIntensityd,
+    Orientationd,
     RandFlipd,
     RandRotate90d,
     RandScaleIntensityd,
     RandShiftIntensityd,
-    NormalizeIntensityd,
-    Orientationd,
+    RandSpatialCropd,
     Spacingd,
-    EnsureTyped,
 )
 
 

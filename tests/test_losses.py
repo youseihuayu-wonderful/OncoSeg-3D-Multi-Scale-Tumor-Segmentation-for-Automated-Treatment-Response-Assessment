@@ -57,7 +57,7 @@ class TestDeepSupervisionLoss:
     """Test deep supervision weighted loss."""
 
     def test_weighted_sum(self):
-        from src.training.losses import DiceCELoss, DeepSupervisionLoss
+        from src.training.losses import DeepSupervisionLoss, DiceCELoss
 
         base_loss = DiceCELoss()
         ds_loss = DeepSupervisionLoss(base_loss)
@@ -76,7 +76,7 @@ class TestDeepSupervisionLoss:
         assert loss.item() > 0
 
     def test_single_prediction(self):
-        from src.training.losses import DiceCELoss, DeepSupervisionLoss
+        from src.training.losses import DeepSupervisionLoss, DiceCELoss
 
         base_loss = DiceCELoss()
         ds_loss = DeepSupervisionLoss(base_loss)

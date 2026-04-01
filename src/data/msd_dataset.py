@@ -122,7 +122,7 @@ class MSDBrainTumorDataset:
     def summary(self) -> str:
         """Print dataset summary."""
         lines = [
-            f"MSD Brain Tumor Dataset",
+            "MSD Brain Tumor Dataset",
             f"  Root: {self.root_dir}",
             f"  Split: {self.split}",
             f"  Subjects: {len(self.data_dicts)}",

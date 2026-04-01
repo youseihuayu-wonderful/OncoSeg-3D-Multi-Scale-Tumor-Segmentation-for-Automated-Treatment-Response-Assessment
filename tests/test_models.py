@@ -60,6 +60,7 @@ class TestRECIST:
 
     def test_empty_mask(self):
         import numpy as np
+
         from src.response.recist import RECISTMeasurer
         measurer = RECISTMeasurer()
         mask = np.zeros((64, 64, 64), dtype=np.uint8)
@@ -68,6 +69,7 @@ class TestRECIST:
 
     def test_sphere_volume(self):
         import numpy as np
+
         from src.response.recist import RECISTMeasurer
         measurer = RECISTMeasurer()
 
@@ -87,7 +89,8 @@ class TestRECIST:
 
     def test_response_classifier(self):
         import numpy as np
-        from src.response.classifier import ResponseClassifier, ResponseCategory
+
+        from src.response.classifier import ResponseCategory, ResponseClassifier
 
         classifier = ResponseClassifier()
 

@@ -6,7 +6,7 @@ from pathlib import Path
 import hydra
 import torch
 import torch.nn as nn
-from monai.data import DataLoader, decollate_batch
+from monai.data import DataLoader
 from monai.inferers import sliding_window_inference
 from monai.metrics import DiceMetric, HausdorffDistanceMetric
 from omegaconf import DictConfig
@@ -21,7 +21,7 @@ try:
 except ImportError:
     WANDB_AVAILABLE = False
 
-from src.training.losses import DiceCELoss, DeepSupervisionLoss
+from src.training.losses import DeepSupervisionLoss, DiceCELoss
 
 logger = logging.getLogger(__name__)
 

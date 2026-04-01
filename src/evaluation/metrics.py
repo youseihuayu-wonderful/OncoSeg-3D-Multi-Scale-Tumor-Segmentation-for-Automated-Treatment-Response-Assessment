@@ -1,12 +1,11 @@
 """Segmentation evaluation metrics for tumor segmentation."""
 
-import numpy as np
 import torch
 from monai.metrics import (
+    ConfusionMatrixMetric,
     DiceMetric,
     HausdorffDistanceMetric,
     SurfaceDistanceMetric,
-    ConfusionMatrixMetric,
 )
 
 

@@ -123,7 +123,7 @@ class FailureAnalyzer:
 
     def size_stratified_analysis(self) -> str:
         """Analyze performance stratified by tumor size."""
-        categories = {"small": [], "medium": [], "large": [], "no_tumor": []}
+        categories: dict[str, list[float]] = {"small": [], "medium": [], "large": [], "no_tumor": []}
 
         for s in self.subjects:
             categories[s["size_category"]].append(s["mean_dice"])
@@ -147,7 +147,7 @@ class FailureAnalyzer:
                 f"{np.max(scores):>8.4f}"
             )
 
-        lines.append(f"\n  Small = <1cm³, Medium = 1-10cm³, Large = >10cm³")
+        lines.append("\n  Small = <1cm³, Medium = 1-10cm³, Large = >10cm³")
 
         return "\n".join(lines)
 
