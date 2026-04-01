@@ -1,0 +1,14 @@
+# @package _global_
+
+# Full experiment config: OncoSeg on BraTS 2023
+defaults:
+  - override /model: oncoseg
+  - override /data: brats2023
+
+training:
+  max_epochs: 300
+  batch_size: 2
+  lr: 1.0e-4
+  save_dir: experiments/brats_oncoseg
+  use_wandb: true
+  seed: 42

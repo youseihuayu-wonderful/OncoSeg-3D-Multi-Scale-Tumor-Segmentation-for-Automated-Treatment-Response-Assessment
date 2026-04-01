@@ -1,0 +1,6 @@
+name: unet3d
+_target_: src.models.baselines.unet3d.UNet3D
+
+in_channels: 4
+num_classes: 4
+features: [32, 64, 128, 256, 512]

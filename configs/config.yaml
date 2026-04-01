@@ -1,0 +1,27 @@
+defaults:
+  - model: oncoseg
+  - data: brats2023
+  - _self_
+
+training:
+  max_epochs: 300
+  batch_size: 2
+  lr: 1.0e-4
+  min_lr: 1.0e-6
+  weight_decay: 1.0e-5
+  dice_weight: 0.5
+  ce_weight: 0.5
+  val_interval: 5
+  sw_batch_size: 4
+  grad_clip: 1.0
+  save_dir: experiments/${model.name}
+  use_wandb: true
+  seed: 42
+
+evaluation:
+  results_path: experiments/${model.name}/results.json
+  mc_samples: 10
+
+hydra:
+  run:
+    dir: outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}

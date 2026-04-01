@@ -1,0 +1,20 @@
+name: brats2023
+root_dir: data/raw/brats2023
+roi_size: [128, 128, 128]
+pixdim: [1.0, 1.0, 1.0]
+cache_rate: 0.1
+num_workers: 4
+
+# BraTS label mapping
+num_classes: 4
+class_names:
+  - background
+  - ncr_net      # Necrotic / Non-Enhancing Tumor Core
+  - edema        # Peritumoral Edema
+  - enhancing    # GD-Enhancing Tumor
+
+# Evaluation regions
+regions:
+  ET: [3]           # Enhancing Tumor
+  TC: [1, 3]        # Tumor Core
+  WT: [1, 2, 3]     # Whole Tumor

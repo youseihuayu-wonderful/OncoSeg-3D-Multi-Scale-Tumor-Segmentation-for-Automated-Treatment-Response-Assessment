@@ -1,0 +1,108 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "oncoseg"
+version = "0.1.0"
+description = "OncoSeg: 3D Multi-Scale Tumor Segmentation for Automated Treatment Response Assessment"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.11"
+authors = [
+    {name = "OncoSeg Team"},
+]
+keywords = [
+    "medical-imaging",
+    "tumor-segmentation",
+    "3d-segmentation",
+    "deep-learning",
+    "oncology",
+    "clinical-trials",
+    "treatment-response",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    # Deep Learning
+    "torch>=2.1.0",
+    "torchvision>=0.16.0",
+    # Medical Imaging
+    "monai[all]>=1.3.0",
+    "nibabel>=5.2.0",
+    "SimpleITK>=2.3.0",
+    "pydicom>=2.4.0",
+    # NLP / Report Generation
+    "transformers>=4.36.0",
+    "tokenizers>=0.15.0",
+    # Experiment Management
+    "wandb>=0.16.0",
+    "hydra-core>=1.3.0",
+    "omegaconf>=2.3.0",
+    # Data & Computation
+    "numpy>=1.26.0",
+    "pandas>=2.1.0",
+    "scipy>=1.11.0",
+    "scikit-learn>=1.3.0",
+    # Visualization
+    "matplotlib>=3.8.0",
+    "seaborn>=0.13.0",
+    # Utilities
+    "tqdm>=4.66.0",
+    "rich>=13.7.0",
+    "pyyaml>=6.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "ruff>=0.1.0",
+    "mypy>=1.7.0",
+    "pre-commit>=3.6.0",
+]
+api = [
+    "fastapi>=0.108.0",
+    "uvicorn>=0.25.0",
+    "python-multipart>=0.0.6",
+]
+dashboard = [
+    "streamlit>=1.29.0",
+    "plotly>=5.18.0",
+]
+viewer = [
+    "vtk>=9.3.0",
+]
+all = ["oncoseg[dev,api,dashboard,viewer]"]
+
+[project.scripts]
+oncoseg-train = "src.training.trainer:main"
+oncoseg-eval = "src.evaluation.evaluator:main"
+oncoseg-predict = "src.inference:main"
+
+[tool.setuptools.packages.find]
+include = ["src*"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v --tb=short"
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true

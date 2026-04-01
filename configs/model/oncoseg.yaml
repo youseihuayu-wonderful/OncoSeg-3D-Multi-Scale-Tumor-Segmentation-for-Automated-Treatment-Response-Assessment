@@ -1,0 +1,13 @@
+name: oncoseg
+_target_: src.models.oncoseg.OncoSeg
+
+in_channels: 4
+num_classes: 4
+embed_dim: 48
+depths: [2, 2, 6, 2]
+num_heads: [3, 6, 12, 24]
+window_size: [7, 7, 7]
+drop_rate: 0.0
+attn_drop_rate: 0.0
+dropout_rate: 0.1
+deep_supervision: true

@@ -1,0 +1,43 @@
+# @package _global_
+
+# Ablation study configuration
+# Run with: oncoseg-train experiment=brats_ablation
+
+defaults:
+  - override /model: oncoseg
+  - override /data: brats2023
+
+training:
+  max_epochs: 300
+  batch_size: 2
+  lr: 1.0e-4
+  save_dir: experiments/ablation
+  use_wandb: true
+
+# Ablation variants (override via command line):
+#
+# A1 - Encoder type:
+#   oncoseg-train experiment=brats_ablation model=unet3d       # CNN encoder
+#   oncoseg-train experiment=brats_ablation model=unetr        # ViT encoder
+#   oncoseg-train experiment=brats_ablation model=oncoseg      # Hybrid (ours)
+#
+# A2 - Skip connection type:
+#   oncoseg-train experiment=brats_ablation model.skip_type=concat
+#   oncoseg-train experiment=brats_ablation model.skip_type=cross_attn
+#
+# A3 - Deep supervision:
+#   oncoseg-train experiment=brats_ablation model.deep_supervision=true
+#   oncoseg-train experiment=brats_ablation model.deep_supervision=false
+#
+# A4 - Uncertainty method:
+#   oncoseg-train experiment=brats_ablation evaluation.mc_samples=0      # None
+#   oncoseg-train experiment=brats_ablation evaluation.mc_samples=10     # MC Dropout
+#
+# A5 - Pretraining:
+#   oncoseg-train experiment=brats_ablation model.pretrained=none
+#   oncoseg-train experiment=brats_ablation model.pretrained=imagenet22k
+#
+# A6 - Input resolution:
+#   oncoseg-train experiment=brats_ablation data.roi_size=[96,96,96]
+#   oncoseg-train experiment=brats_ablation data.roi_size=[128,128,128]
+#   oncoseg-train experiment=brats_ablation data.roi_size=[192,192,192]
