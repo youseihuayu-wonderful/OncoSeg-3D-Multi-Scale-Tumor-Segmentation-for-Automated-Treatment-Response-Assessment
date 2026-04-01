@@ -67,6 +67,16 @@ class CNNDecoder3D(nn.Module):
                 )
             )
 
+        # Recover the 4x downsampling from patch embedding (2x + 2x = 4x)
+        self.upsample_head = nn.Sequential(
+            nn.ConvTranspose3d(encoder_dims[0], encoder_dims[0], kernel_size=2, stride=2),
+            nn.InstanceNorm3d(encoder_dims[0]),
+            nn.LeakyReLU(inplace=True),
+            nn.ConvTranspose3d(encoder_dims[0], encoder_dims[0], kernel_size=2, stride=2),
+            nn.InstanceNorm3d(encoder_dims[0]),
+            nn.LeakyReLU(inplace=True),
+        )
+
         self.final_conv = nn.Conv3d(encoder_dims[0], num_classes, kernel_size=1)
 
     def forward(
@@ -92,6 +102,9 @@ class CNNDecoder3D(nn.Module):
             cross_attn = cross_attn_skips[skip_idx] if cross_attn_skips else None
             x = block(x, skip, cross_attn)
             intermediates.append(x)
+
+        # Upsample to recover the 4x patch embedding downsampling
+        x = self.upsample_head(x)
 
         pred = self.final_conv(x)
 

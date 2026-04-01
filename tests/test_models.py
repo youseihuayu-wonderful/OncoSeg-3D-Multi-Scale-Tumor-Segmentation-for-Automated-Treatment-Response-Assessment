@@ -21,15 +21,15 @@ class TestOncoSeg:
 
     def test_output_shape(self, model):
         """Verify output spatial dimensions match input."""
-        x = torch.randn(1, 4, 128, 128, 128)
+        x = torch.randn(1, 4, 64, 64, 64)
         model.eval()
         with torch.no_grad():
             out = model(x)
-        assert out["pred"].shape == (1, 4, 128, 128, 128)
+        assert out["pred"].shape == (1, 4, 64, 64, 64)
 
     def test_deep_supervision_training(self, model):
         """Verify deep supervision outputs during training."""
-        x = torch.randn(1, 4, 128, 128, 128)
+        x = torch.randn(1, 4, 64, 64, 64)
         model.train()
         out = model(x)
         assert "pred" in out
@@ -43,16 +43,16 @@ class TestBaselines:
     def test_unet3d(self):
         from src.models.baselines.unet3d import UNet3D
         model = UNet3D(in_channels=4, num_classes=4)
-        x = torch.randn(1, 4, 128, 128, 128)
+        x = torch.randn(1, 4, 64, 64, 64)
         out = model(x)
-        assert out["pred"].shape == (1, 4, 128, 128, 128)
+        assert out["pred"].shape == (1, 4, 64, 64, 64)
 
     def test_swin_unetr(self):
         from src.models.baselines.swin_unetr import SwinUNETRBaseline
-        model = SwinUNETRBaseline(in_channels=4, num_classes=4, img_size=(128, 128, 128))
-        x = torch.randn(1, 4, 128, 128, 128)
+        model = SwinUNETRBaseline(in_channels=4, num_classes=4)
+        x = torch.randn(1, 4, 64, 64, 64)
         out = model(x)
-        assert out["pred"].shape == (1, 4, 128, 128, 128)
+        assert out["pred"].shape == (1, 4, 64, 64, 64)
 
 
 class TestRECIST:

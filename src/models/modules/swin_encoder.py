@@ -55,4 +55,6 @@ class SwinEncoder3D(nn.Module):
             List of feature maps at each encoder stage (4 stages).
         """
         features = self.swin(x)
-        return features
+        # MONAI's SwinTransformer returns 5 features (4 stages + bottleneck).
+        # We use only the 4 stage outputs matching our encoder_dims.
+        return features[:4]

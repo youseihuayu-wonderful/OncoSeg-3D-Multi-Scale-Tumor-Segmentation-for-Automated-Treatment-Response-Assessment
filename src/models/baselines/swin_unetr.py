@@ -11,15 +11,14 @@ class SwinUNETRBaseline(nn.Module):
         self,
         in_channels: int = 4,
         num_classes: int = 4,
-        img_size: tuple[int, ...] = (128, 128, 128),
         feature_size: int = 48,
         depths: tuple[int, ...] = (2, 2, 2, 2),
         num_heads: tuple[int, ...] = (3, 6, 12, 24),
+        **kwargs,
     ):
         super().__init__()
 
         self.model = SwinUNETR(
-            img_size=img_size,
             in_channels=in_channels,
             out_channels=num_classes,
             feature_size=feature_size,

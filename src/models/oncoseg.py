@@ -70,8 +70,10 @@ class OncoSeg(nn.Module):
 
         # Deep supervision heads
         if deep_supervision:
+            # Decoder intermediates are in reverse order (deep→shallow):
+            # [embed_dim*4, embed_dim*2, embed_dim]
             self.ds_heads = DeepSupervisionHead(
-                encoder_dims=encoder_dims[:-1],
+                encoder_dims=list(reversed(encoder_dims[:-1])),
                 num_classes=num_classes,
             )
 
