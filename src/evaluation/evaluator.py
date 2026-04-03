@@ -29,7 +29,12 @@ class Evaluator:
         self.model = model
         self.test_loader = test_loader
         self.cfg = cfg
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        if torch.cuda.is_available():
+            self.device = torch.device("cuda")
+        elif torch.backends.mps.is_available():
+            self.device = torch.device("mps")
+        else:
+            self.device = torch.device("cpu")
         self.model = self.model.to(self.device)
         self.metrics = SegmentationMetrics()
 
