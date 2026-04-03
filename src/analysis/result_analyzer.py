@@ -44,8 +44,7 @@ class ResultAnalyzer:
 
     def best_dice_summary(self) -> str:
         """Print best validation Dice for all models."""
-        lines = ["Model                Best Dice    Best Epoch",
-                 "─" * 50]
+        lines = ["Model                Best Dice    Best Epoch", "─" * 50]
         for name, hist in sorted(self.histories.items()):
             best = hist.get("best_dice", 0)
             epoch = hist.get("best_epoch", "?")
@@ -72,9 +71,7 @@ class ResultAnalyzer:
             )
         return "\n".join(lines)
 
-    def significance_tests(
-        self, target_model: str, alternative: str = "greater"
-    ) -> str:
+    def significance_tests(self, target_model: str, alternative: str = "greater") -> str:
         """Run Wilcoxon signed-rank tests: target vs all other models.
 
         Args:
@@ -120,21 +117,26 @@ class ResultAnalyzer:
                     stat, p_value = stats.wilcoxon(
                         target_scores, baseline_scores, alternative=alternative
                     )
-                    sig = "***" if p_value < 0.001 else "**" if p_value < 0.01 else "*" if p_value < 0.05 else "ns"
+                    sig = (
+                        "***"
+                        if p_value < 0.001
+                        else "**"
+                        if p_value < 0.01
+                        else "*"
+                        if p_value < 0.05
+                        else "ns"
+                    )
                 except ValueError:
                     p_value = 1.0
                     sig = "ns (identical)"
 
-                lines.append(
-                    f"    {region}: p={p_value:.4f} {sig:>4s}  Δ={delta:+.4f}"
-                )
+                lines.append(f"    {region}: p={p_value:.4f} {sig:>4s}  Δ={delta:+.4f}")
 
         return "\n".join(lines)
 
     def convergence_analysis(self) -> str:
         """Analyze training convergence for each model."""
-        lines = ["Convergence Analysis",
-                 "─" * 60]
+        lines = ["Convergence Analysis", "─" * 60]
 
         for name, hist in sorted(self.histories.items()):
             losses = hist.get("train_loss", [])
@@ -147,21 +149,24 @@ class ResultAnalyzer:
 
             # Check for overfitting: loss increasing in last 20%
             n = len(losses)
-            last_20 = losses[int(n * 0.8):]
+            last_20 = losses[int(n * 0.8) :]
             overfitting = last_20[-1] > last_20[0] if len(last_20) > 1 else False
 
             lines.append(f"\n  {name}:")
             lines.append(f"    Final loss:     {final_loss:.4f}")
             lines.append(f"    Min loss:       {min_loss:.4f} (epoch {min_epoch})")
-            lines.append(f"    Overfitting:    {'YES — loss rising in last 20%' if overfitting else 'No'}")
-            lines.append(f"    Best Dice:      {hist.get('best_dice', 0):.4f} (epoch {hist.get('best_epoch', '?')})")
+            lines.append(
+                f"    Overfitting:    {'YES — loss rising in last 20%' if overfitting else 'No'}"
+            )
+            lines.append(
+                f"    Best Dice:      {hist.get('best_dice', 0):.4f} (epoch {hist.get('best_epoch', '?')})"
+            )
 
         return "\n".join(lines)
 
     def per_region_breakdown(self) -> str:
         """Detailed per-region analysis showing which model wins where."""
-        lines = ["Per-Region Winners",
-                 "─" * 60]
+        lines = ["Per-Region Winners", "─" * 60]
 
         for region in self.REGIONS:
             dice_key = f"dice_{region}"

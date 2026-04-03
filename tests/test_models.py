@@ -10,6 +10,7 @@ class TestOncoSeg:
     @pytest.fixture
     def model(self):
         from src.models.oncoseg import OncoSeg
+
         return OncoSeg(
             in_channels=4,
             num_classes=4,
@@ -42,6 +43,7 @@ class TestBaselines:
 
     def test_unet3d(self):
         from src.models.baselines.unet3d import UNet3D
+
         model = UNet3D(in_channels=4, num_classes=4)
         x = torch.randn(1, 4, 64, 64, 64)
         out = model(x)
@@ -49,6 +51,7 @@ class TestBaselines:
 
     def test_swin_unetr(self):
         from src.models.baselines.swin_unetr import SwinUNETRBaseline
+
         model = SwinUNETRBaseline(in_channels=4, num_classes=4)
         x = torch.randn(1, 4, 64, 64, 64)
         out = model(x)
@@ -62,6 +65,7 @@ class TestRECIST:
         import numpy as np
 
         from src.response.recist import RECISTMeasurer
+
         measurer = RECISTMeasurer()
         mask = np.zeros((64, 64, 64), dtype=np.uint8)
         assert measurer.longest_axial_diameter(mask) == 0.0
@@ -71,6 +75,7 @@ class TestRECIST:
         import numpy as np
 
         from src.response.recist import RECISTMeasurer
+
         measurer = RECISTMeasurer()
 
         # Create a sphere with radius 10 voxels
@@ -79,7 +84,10 @@ class TestRECIST:
         for x in range(64):
             for y in range(64):
                 for z in range(64):
-                    if np.sqrt((x - center[0])**2 + (y - center[1])**2 + (z - center[2])**2) <= 10:
+                    if (
+                        np.sqrt((x - center[0]) ** 2 + (y - center[1]) ** 2 + (z - center[2]) ** 2)
+                        <= 10
+                    ):
                         mask[x, y, z] = 1
 
         vol = measurer.volume_mm3(mask, pixdim=(1.0, 1.0, 1.0))

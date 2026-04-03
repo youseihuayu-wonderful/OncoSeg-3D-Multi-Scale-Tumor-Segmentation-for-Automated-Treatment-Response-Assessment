@@ -44,9 +44,7 @@ class CrossAttentionSkip(nn.Module):
             nn.Linear(decoder_dim * 4, decoder_dim),
         )
 
-    def forward(
-        self, encoder_feat: torch.Tensor, decoder_feat: torch.Tensor
-    ) -> torch.Tensor:
+    def forward(self, encoder_feat: torch.Tensor, decoder_feat: torch.Tensor) -> torch.Tensor:
         """Apply cross-attention between encoder and decoder features.
 
         Args:

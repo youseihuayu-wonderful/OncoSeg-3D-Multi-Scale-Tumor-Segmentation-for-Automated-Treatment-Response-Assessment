@@ -95,9 +95,9 @@ class Trainer:
             if "image" in batch:
                 images = batch["image"].to(self.device)
             else:
-                images = torch.cat(
-                    [batch[k] for k in ["t1n", "t1c", "t2w", "t2f"]], dim=1
-                ).to(self.device)
+                images = torch.cat([batch[k] for k in ["t1n", "t1c", "t2w", "t2f"]], dim=1).to(
+                    self.device
+                )
             labels = batch["label"].to(self.device)
 
             self.optimizer.zero_grad()
@@ -135,9 +135,9 @@ class Trainer:
             if "image" in batch:
                 images = batch["image"].to(self.device)
             else:
-                images = torch.cat(
-                    [batch[k] for k in ["t1n", "t1c", "t2w", "t2f"]], dim=1
-                ).to(self.device)
+                images = torch.cat([batch[k] for k in ["t1n", "t1c", "t2w", "t2f"]], dim=1).to(
+                    self.device
+                )
             labels = batch["label"].to(self.device)
 
             # Sliding window inference for full-resolution validation
@@ -253,9 +253,7 @@ def main(cfg: DictConfig):
     train_loader = DataLoader(
         train_ds, batch_size=cfg.training.batch_size, shuffle=True, num_workers=num_workers
     )
-    val_loader = DataLoader(
-        val_ds, batch_size=1, shuffle=False, num_workers=num_workers
-    )
+    val_loader = DataLoader(val_ds, batch_size=1, shuffle=False, num_workers=num_workers)
 
     # Model
     model = OncoSeg(

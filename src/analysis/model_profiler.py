@@ -52,10 +52,10 @@ def estimate_memory_mb(
     for dim in input_shape:
         input_elements *= dim
 
-    param_mb = n_params * dtype_bytes / (1024 ** 2)
-    optimizer_mb = n_params * dtype_bytes * 2 / (1024 ** 2)  # Adam m + v
-    gradient_mb = n_params * dtype_bytes / (1024 ** 2)
-    input_mb = input_elements * dtype_bytes / (1024 ** 2)
+    param_mb = n_params * dtype_bytes / (1024**2)
+    optimizer_mb = n_params * dtype_bytes * 2 / (1024**2)  # Adam m + v
+    gradient_mb = n_params * dtype_bytes / (1024**2)
+    input_mb = input_elements * dtype_bytes / (1024**2)
     activation_mb = input_mb * 3  # Rough estimate for U-Net
 
     total_mb = param_mb + optimizer_mb + gradient_mb + input_mb + activation_mb
@@ -151,21 +151,28 @@ def profile_all_models(
 
     Uses 64³ input to avoid OOM on machines without GPU.
     """
+    from src.models.baselines.swin_unetr import SwinUNETRBaseline
     from src.models.baselines.unet3d import UNet3D
     from src.models.baselines.unetr import UNETR
-    from src.models.baselines.swin_unetr import SwinUNETRBaseline
     from src.models.oncoseg import OncoSeg
 
     models = {
         "OncoSeg": OncoSeg(
-            in_channels=4, num_classes=4, embed_dim=48,
-            depths=(2, 2, 2, 2), num_heads=(3, 6, 12, 24),
+            in_channels=4,
+            num_classes=4,
+            embed_dim=48,
+            depths=(2, 2, 2, 2),
+            num_heads=(3, 6, 12, 24),
             deep_supervision=True,
         ),
         "OncoSeg (temporal)": OncoSeg(
-            in_channels=4, num_classes=4, embed_dim=48,
-            depths=(2, 2, 2, 2), num_heads=(3, 6, 12, 24),
-            deep_supervision=True, temporal=True,
+            in_channels=4,
+            num_classes=4,
+            embed_dim=48,
+            depths=(2, 2, 2, 2),
+            num_heads=(3, 6, 12, 24),
+            deep_supervision=True,
+            temporal=True,
         ),
         "UNet3D": UNet3D(in_channels=4, num_classes=4),
         "SwinUNETR": SwinUNETRBaseline(in_channels=4, num_classes=4),
@@ -186,10 +193,7 @@ def profile_all_models(
         p = profile["parameters"]
         m = profile["memory"]
         lines.append(
-            f"{name:22s} "
-            f"{p['total']:>12,} "
-            f"{p['trainable']:>12,} "
-            f"{m['total_estimated_mb']:>12.1f}"
+            f"{name:22s} {p['total']:>12,} {p['trainable']:>12,} {m['total_estimated_mb']:>12.1f}"
         )
         del model
 

@@ -14,9 +14,9 @@ class RECISTMeasurer:
         - Stable Disease (SD): Neither PR nor PD criteria met
     """
 
-    CR_THRESHOLD = 0.0     # Complete disappearance
-    PR_THRESHOLD = -0.30   # 30% decrease
-    PD_THRESHOLD = 0.20    # 20% increase
+    CR_THRESHOLD = 0.0  # Complete disappearance
+    PR_THRESHOLD = -0.30  # 30% decrease
+    PD_THRESHOLD = 0.20  # 20% increase
 
     def longest_axial_diameter(
         self, mask: np.ndarray, pixdim: tuple[float, float, float] = (1.0, 1.0, 1.0)
@@ -85,12 +85,14 @@ class RECISTMeasurer:
 
         for i in range(1, num_features + 1):
             lesion_mask = (labeled_array == i).astype(np.uint8)
-            lesions.append({
-                "id": i,
-                "longest_diameter_mm": self.longest_axial_diameter(lesion_mask, pixdim),
-                "volume_mm3": self.volume_mm3(lesion_mask, pixdim),
-                "voxel_count": int(lesion_mask.sum()),
-            })
+            lesions.append(
+                {
+                    "id": i,
+                    "longest_diameter_mm": self.longest_axial_diameter(lesion_mask, pixdim),
+                    "volume_mm3": self.volume_mm3(lesion_mask, pixdim),
+                    "voxel_count": int(lesion_mask.sum()),
+                }
+            )
 
         lesions.sort(key=lambda x: x["volume_mm3"], reverse=True)
         return lesions

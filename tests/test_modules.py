@@ -64,8 +64,10 @@ class TestSwinEncoder:
         from src.models.modules.swin_encoder import SwinEncoder3D
 
         enc = SwinEncoder3D(
-            in_channels=4, embed_dim=48,
-            depths=(2, 2, 2, 2), num_heads=(3, 6, 12, 24),
+            in_channels=4,
+            embed_dim=48,
+            depths=(2, 2, 2, 2),
+            num_heads=(3, 6, 12, 24),
         )
         x = torch.randn(1, 4, 64, 64, 64)
         enc.eval()
@@ -74,10 +76,10 @@ class TestSwinEncoder:
 
         # Should return exactly 4 features (truncated from MONAI's 5)
         assert len(features) == 4
-        assert features[0].shape[1] == 48    # embed_dim
-        assert features[1].shape[1] == 96    # embed_dim * 2
-        assert features[2].shape[1] == 192   # embed_dim * 4
-        assert features[3].shape[1] == 384   # embed_dim * 8
+        assert features[0].shape[1] == 48  # embed_dim
+        assert features[1].shape[1] == 96  # embed_dim * 2
+        assert features[2].shape[1] == 192  # embed_dim * 4
+        assert features[3].shape[1] == 384  # embed_dim * 8
 
 
 class TestUNETRBaseline:

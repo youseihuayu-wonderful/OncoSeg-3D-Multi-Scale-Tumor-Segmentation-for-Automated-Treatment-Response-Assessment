@@ -40,28 +40,32 @@ def build_inference_transforms(
 ) -> Compose:
     """Minimal preprocessing transforms for inference on BraTS-format inputs."""
     keys = ["t1n", "t1c", "t2w", "t2f"]
-    return Compose([
-        LoadImaged(keys=keys),
-        EnsureChannelFirstd(keys=keys),
-        Orientationd(keys=keys, axcodes="RAS"),
-        Spacingd(keys=keys, pixdim=pixdim, mode=("bilinear",) * 4),
-        NormalizeIntensityd(keys=keys, nonzero=True, channel_wise=True),
-        EnsureTyped(keys=keys),
-    ])
+    return Compose(
+        [
+            LoadImaged(keys=keys),
+            EnsureChannelFirstd(keys=keys),
+            Orientationd(keys=keys, axcodes="RAS"),
+            Spacingd(keys=keys, pixdim=pixdim, mode=("bilinear",) * 4),
+            NormalizeIntensityd(keys=keys, nonzero=True, channel_wise=True),
+            EnsureTyped(keys=keys),
+        ]
+    )
 
 
 def build_single_image_transforms(
     pixdim: tuple[float, float, float] = (1.0, 1.0, 1.0),
 ) -> Compose:
     """Preprocessing for single 4D NIfTI (MSD-format) inference."""
-    return Compose([
-        LoadImaged(keys=["image"]),
-        EnsureChannelFirstd(keys=["image"]),
-        Orientationd(keys=["image"], axcodes="RAS"),
-        Spacingd(keys=["image"], pixdim=pixdim, mode=("bilinear",)),
-        NormalizeIntensityd(keys="image", nonzero=True, channel_wise=True),
-        EnsureTyped(keys=["image"]),
-    ])
+    return Compose(
+        [
+            LoadImaged(keys=["image"]),
+            EnsureChannelFirstd(keys=["image"]),
+            Orientationd(keys=["image"], axcodes="RAS"),
+            Spacingd(keys=["image"], pixdim=pixdim, mode=("bilinear",)),
+            NormalizeIntensityd(keys="image", nonzero=True, channel_wise=True),
+            EnsureTyped(keys=["image"]),
+        ]
+    )
 
 
 def discover_subjects(input_dir: Path) -> list[dict]:
@@ -110,9 +114,7 @@ class Predictor:
         return self.model(x)["pred"]
 
     @torch.no_grad()
-    def predict_volume(
-        self, image: torch.Tensor
-    ) -> dict[str, np.ndarray]:
+    def predict_volume(self, image: torch.Tensor) -> dict[str, np.ndarray]:
         """Run prediction on a single preprocessed volume.
 
         Args:
@@ -165,9 +167,7 @@ class Predictor:
 
         stacked = torch.stack(predictions, dim=0)
         mean_pred = stacked.mean(dim=0)
-        entropy = -torch.sum(
-            mean_pred * torch.log(mean_pred + 1e-8), dim=1
-        ).squeeze(0)
+        entropy = -torch.sum(mean_pred * torch.log(mean_pred + 1e-8), dim=1).squeeze(0)
 
         return entropy.cpu().numpy()
 
@@ -248,9 +248,7 @@ class Predictor:
             lesions = self.measurer.measure_lesions(et_mask, pixdim)
             outputs["recist"] = {
                 "num_lesions": len(lesions),
-                "sum_longest_diameter_mm": sum(
-                    les["longest_diameter_mm"] for les in lesions
-                ),
+                "sum_longest_diameter_mm": sum(les["longest_diameter_mm"] for les in lesions),
                 "total_volume_mm3": sum(les["volume_mm3"] for les in lesions),
                 "lesions": lesions,
             }

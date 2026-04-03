@@ -7,15 +7,18 @@ import numpy as np
 try:
     import matplotlib
     import matplotlib.pyplot as plt
-    matplotlib.rcParams.update({
-        "font.size": 12,
-        "axes.titlesize": 14,
-        "axes.labelsize": 12,
-        "xtick.labelsize": 10,
-        "ytick.labelsize": 10,
-        "legend.fontsize": 10,
-        "figure.dpi": 150,
-    })
+
+    matplotlib.rcParams.update(
+        {
+            "font.size": 12,
+            "axes.titlesize": 14,
+            "axes.labelsize": 12,
+            "xtick.labelsize": 10,
+            "ytick.labelsize": 10,
+            "legend.fontsize": 10,
+            "figure.dpi": 150,
+        }
+    )
     HAS_MATPLOTLIB = True
 except ImportError:
     HAS_MATPLOTLIB = False
@@ -45,9 +48,7 @@ class FigureGenerator:
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
-    def training_curves(
-        self, histories: dict[str, dict], val_interval: int = 5
-    ) -> Path | None:
+    def training_curves(self, histories: dict[str, dict], val_interval: int = 5) -> Path | None:
         """Plot training loss and validation Dice curves.
 
         Args:

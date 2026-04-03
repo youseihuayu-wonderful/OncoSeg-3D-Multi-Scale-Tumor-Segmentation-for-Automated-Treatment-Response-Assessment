@@ -16,9 +16,9 @@ class DeepSupervisionHead(nn.Module):
     def __init__(self, encoder_dims: list[int], num_classes: int):
         super().__init__()
 
-        self.heads = nn.ModuleList([
-            nn.Conv3d(dim, num_classes, kernel_size=1) for dim in encoder_dims
-        ])
+        self.heads = nn.ModuleList(
+            [nn.Conv3d(dim, num_classes, kernel_size=1) for dim in encoder_dims]
+        )
 
     def forward(self, intermediates: list[torch.Tensor]) -> list[torch.Tensor]:
         """Produce auxiliary segmentation maps at each decoder scale.

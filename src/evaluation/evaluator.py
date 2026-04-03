@@ -40,9 +40,9 @@ class Evaluator:
         self.metrics.reset()
 
         for batch in tqdm(self.test_loader, desc="Evaluating"):
-            images = torch.cat(
-                [batch[k] for k in ["t1n", "t1c", "t2w", "t2f"]], dim=1
-            ).to(self.device)
+            images = torch.cat([batch[k] for k in ["t1n", "t1c", "t2w", "t2f"]], dim=1).to(
+                self.device
+            )
             labels = batch["label"].to(self.device)
 
             preds = sliding_window_inference(

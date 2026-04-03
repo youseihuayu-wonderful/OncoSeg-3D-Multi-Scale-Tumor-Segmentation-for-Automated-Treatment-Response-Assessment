@@ -36,23 +36,25 @@ def get_train_transforms(
     keys = ["t1n", "t1c", "t2w", "t2f", "label"]
     image_keys = ["t1n", "t1c", "t2w", "t2f"]
 
-    return Compose([
-        LoadImaged(keys=keys),
-        EnsureChannelFirstd(keys=keys),
-        ConvertToMultiChannelBasedOnBratsClassesd(keys="label"),
-        Orientationd(keys=keys, axcodes="RAS"),
-        Spacingd(keys=keys, pixdim=pixdim, mode=("bilinear",) * 4 + ("nearest",)),
-        NormalizeIntensityd(keys=image_keys, nonzero=True, channel_wise=True),
-        CropForegroundd(keys=keys, source_key="t1c"),
-        RandSpatialCropd(keys=keys, roi_size=roi_size, random_size=False),
-        RandFlipd(keys=keys, prob=0.5, spatial_axis=0),
-        RandFlipd(keys=keys, prob=0.5, spatial_axis=1),
-        RandFlipd(keys=keys, prob=0.5, spatial_axis=2),
-        RandRotate90d(keys=keys, prob=0.5, max_k=3),
-        RandScaleIntensityd(keys=image_keys, factors=0.1, prob=0.5),
-        RandShiftIntensityd(keys=image_keys, offsets=0.1, prob=0.5),
-        EnsureTyped(keys=keys),
-    ])
+    return Compose(
+        [
+            LoadImaged(keys=keys),
+            EnsureChannelFirstd(keys=keys),
+            ConvertToMultiChannelBasedOnBratsClassesd(keys="label"),
+            Orientationd(keys=keys, axcodes="RAS"),
+            Spacingd(keys=keys, pixdim=pixdim, mode=("bilinear",) * 4 + ("nearest",)),
+            NormalizeIntensityd(keys=image_keys, nonzero=True, channel_wise=True),
+            CropForegroundd(keys=keys, source_key="t1c"),
+            RandSpatialCropd(keys=keys, roi_size=roi_size, random_size=False),
+            RandFlipd(keys=keys, prob=0.5, spatial_axis=0),
+            RandFlipd(keys=keys, prob=0.5, spatial_axis=1),
+            RandFlipd(keys=keys, prob=0.5, spatial_axis=2),
+            RandRotate90d(keys=keys, prob=0.5, max_k=3),
+            RandScaleIntensityd(keys=image_keys, factors=0.1, prob=0.5),
+            RandShiftIntensityd(keys=image_keys, offsets=0.1, prob=0.5),
+            EnsureTyped(keys=keys),
+        ]
+    )
 
 
 def get_val_transforms(
@@ -62,13 +64,15 @@ def get_val_transforms(
     keys = ["t1n", "t1c", "t2w", "t2f", "label"]
     image_keys = ["t1n", "t1c", "t2w", "t2f"]
 
-    return Compose([
-        LoadImaged(keys=keys),
-        EnsureChannelFirstd(keys=keys),
-        ConvertToMultiChannelBasedOnBratsClassesd(keys="label"),
-        Orientationd(keys=keys, axcodes="RAS"),
-        Spacingd(keys=keys, pixdim=pixdim, mode=("bilinear",) * 4 + ("nearest",)),
-        NormalizeIntensityd(keys=image_keys, nonzero=True, channel_wise=True),
-        CropForegroundd(keys=keys, source_key="t1c"),
-        EnsureTyped(keys=keys),
-    ])
+    return Compose(
+        [
+            LoadImaged(keys=keys),
+            EnsureChannelFirstd(keys=keys),
+            ConvertToMultiChannelBasedOnBratsClassesd(keys="label"),
+            Orientationd(keys=keys, axcodes="RAS"),
+            Spacingd(keys=keys, pixdim=pixdim, mode=("bilinear",) * 4 + ("nearest",)),
+            NormalizeIntensityd(keys=image_keys, nonzero=True, channel_wise=True),
+            CropForegroundd(keys=keys, source_key="t1c"),
+            EnsureTyped(keys=keys),
+        ]
+    )

@@ -10,6 +10,7 @@ class TestDiceCELoss:
     @pytest.fixture
     def loss_fn(self):
         from src.training.losses import DiceCELoss
+
         return DiceCELoss(dice_weight=0.5, ce_weight=0.5)
 
     def test_output_is_scalar(self, loss_fn):

@@ -10,6 +10,7 @@ from src.response.recist import RECISTMeasurer
 
 class ResponseCategory(Enum):
     """RECIST 1.1 response categories."""
+
     CR = "Complete Response"
     PR = "Partial Response"
     SD = "Stable Disease"
@@ -19,13 +20,14 @@ class ResponseCategory(Enum):
 @dataclass
 class ResponseResult:
     """Result of treatment response assessment."""
+
     category: ResponseCategory
-    baseline_sum_ld: float       # Sum of longest diameters at baseline (mm)
-    followup_sum_ld: float       # Sum of longest diameters at follow-up (mm)
-    percent_change: float         # Percentage change
-    baseline_volume: float        # Total tumor volume at baseline (mm^3)
-    followup_volume: float        # Total tumor volume at follow-up (mm^3)
-    volume_change: float          # Percentage volume change
+    baseline_sum_ld: float  # Sum of longest diameters at baseline (mm)
+    followup_sum_ld: float  # Sum of longest diameters at follow-up (mm)
+    percent_change: float  # Percentage change
+    baseline_volume: float  # Total tumor volume at baseline (mm^3)
+    followup_volume: float  # Total tumor volume at follow-up (mm^3)
+    volume_change: float  # Percentage volume change
     num_baseline_lesions: int
     num_followup_lesions: int
     new_lesions: bool
@@ -68,9 +70,7 @@ class ResponseClassifier:
         else:
             pct_change = 0.0 if followup_sum_ld == 0 else float("inf")
 
-        vol_change = (
-            (followup_vol - baseline_vol) / baseline_vol if baseline_vol > 0 else 0.0
-        )
+        vol_change = (followup_vol - baseline_vol) / baseline_vol if baseline_vol > 0 else 0.0
 
         # Check for new lesions (more lesions in follow-up)
         new_lesions = len(followup_lesions) > len(baseline_lesions)

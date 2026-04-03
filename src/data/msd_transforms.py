@@ -39,44 +39,48 @@ def get_msd_train_transforms(
         8. Random crop to roi_size
         9. Data augmentation (flip, rotate, intensity)
     """
-    return Compose([
-        LoadImaged(keys=["image", "label"]),
-        EnsureChannelFirstd(keys=["image", "label"]),
-        ConvertToMultiChannelBasedOnBratsClassesd(keys="label"),
-        Orientationd(keys=["image", "label"], axcodes="RAS"),
-        Spacingd(
-            keys=["image", "label"],
-            pixdim=pixdim,
-            mode=("bilinear", "nearest"),
-        ),
-        NormalizeIntensityd(keys="image", nonzero=True, channel_wise=True),
-        CropForegroundd(keys=["image", "label"], source_key="image"),
-        RandSpatialCropd(keys=["image", "label"], roi_size=roi_size, random_size=False),
-        RandFlipd(keys=["image", "label"], prob=0.5, spatial_axis=0),
-        RandFlipd(keys=["image", "label"], prob=0.5, spatial_axis=1),
-        RandFlipd(keys=["image", "label"], prob=0.5, spatial_axis=2),
-        RandRotate90d(keys=["image", "label"], prob=0.5, max_k=3),
-        RandScaleIntensityd(keys="image", factors=0.1, prob=0.5),
-        RandShiftIntensityd(keys="image", offsets=0.1, prob=0.5),
-        EnsureTyped(keys=["image", "label"]),
-    ])
+    return Compose(
+        [
+            LoadImaged(keys=["image", "label"]),
+            EnsureChannelFirstd(keys=["image", "label"]),
+            ConvertToMultiChannelBasedOnBratsClassesd(keys="label"),
+            Orientationd(keys=["image", "label"], axcodes="RAS"),
+            Spacingd(
+                keys=["image", "label"],
+                pixdim=pixdim,
+                mode=("bilinear", "nearest"),
+            ),
+            NormalizeIntensityd(keys="image", nonzero=True, channel_wise=True),
+            CropForegroundd(keys=["image", "label"], source_key="image"),
+            RandSpatialCropd(keys=["image", "label"], roi_size=roi_size, random_size=False),
+            RandFlipd(keys=["image", "label"], prob=0.5, spatial_axis=0),
+            RandFlipd(keys=["image", "label"], prob=0.5, spatial_axis=1),
+            RandFlipd(keys=["image", "label"], prob=0.5, spatial_axis=2),
+            RandRotate90d(keys=["image", "label"], prob=0.5, max_k=3),
+            RandScaleIntensityd(keys="image", factors=0.1, prob=0.5),
+            RandShiftIntensityd(keys="image", offsets=0.1, prob=0.5),
+            EnsureTyped(keys=["image", "label"]),
+        ]
+    )
 
 
 def get_msd_val_transforms(
     pixdim: tuple[float, float, float] = (1.0, 1.0, 1.0),
 ) -> Compose:
     """Validation/test transforms for MSD format (no augmentation)."""
-    return Compose([
-        LoadImaged(keys=["image", "label"]),
-        EnsureChannelFirstd(keys=["image", "label"]),
-        ConvertToMultiChannelBasedOnBratsClassesd(keys="label"),
-        Orientationd(keys=["image", "label"], axcodes="RAS"),
-        Spacingd(
-            keys=["image", "label"],
-            pixdim=pixdim,
-            mode=("bilinear", "nearest"),
-        ),
-        NormalizeIntensityd(keys="image", nonzero=True, channel_wise=True),
-        CropForegroundd(keys=["image", "label"], source_key="image"),
-        EnsureTyped(keys=["image", "label"]),
-    ])
+    return Compose(
+        [
+            LoadImaged(keys=["image", "label"]),
+            EnsureChannelFirstd(keys=["image", "label"]),
+            ConvertToMultiChannelBasedOnBratsClassesd(keys="label"),
+            Orientationd(keys=["image", "label"], axcodes="RAS"),
+            Spacingd(
+                keys=["image", "label"],
+                pixdim=pixdim,
+                mode=("bilinear", "nearest"),
+            ),
+            NormalizeIntensityd(keys="image", nonzero=True, channel_wise=True),
+            CropForegroundd(keys=["image", "label"], source_key="image"),
+            EnsureTyped(keys=["image", "label"]),
+        ]
+    )

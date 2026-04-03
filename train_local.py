@@ -18,12 +18,11 @@ import argparse
 import json
 import logging
 import subprocess
-import sys
 from pathlib import Path
 
 import torch
 import torch.nn as nn
-from monai.data import CacheDataset, DataLoader, Dataset
+from monai.data import DataLoader
 from monai.inferers import sliding_window_inference
 from monai.metrics import DiceMetric
 from tqdm import tqdm
@@ -173,13 +172,23 @@ def validate(
 
 def main():
     parser = argparse.ArgumentParser(description="Train OncoSeg locally")
-    parser.add_argument("--download-only", action="store_true", help="Only download dataset, don't train")
+    parser.add_argument(
+        "--download-only", action="store_true", help="Only download dataset, don't train"
+    )
     parser.add_argument("--epochs", type=int, default=50, help="Number of training epochs")
-    parser.add_argument("--batch-size", type=int, default=1, help="Batch size (1 recommended for 8GB RAM)")
-    parser.add_argument("--roi-size", type=int, default=96, help="ROI crop size (96 saves memory vs 128)")
-    parser.add_argument("--embed-dim", type=int, default=24, help="Model embed dim (24=small for M1, 48=full)")
+    parser.add_argument(
+        "--batch-size", type=int, default=1, help="Batch size (1 recommended for 8GB RAM)"
+    )
+    parser.add_argument(
+        "--roi-size", type=int, default=96, help="ROI crop size (96 saves memory vs 128)"
+    )
+    parser.add_argument(
+        "--embed-dim", type=int, default=24, help="Model embed dim (24=small for M1, 48=full)"
+    )
     parser.add_argument("--val-interval", type=int, default=5, help="Validate every N epochs")
-    parser.add_argument("--device", type=str, default="auto", choices=["auto", "cuda", "mps", "cpu"])
+    parser.add_argument(
+        "--device", type=str, default="auto", choices=["auto", "cuda", "mps", "cpu"]
+    )
     parser.add_argument("--lr", type=float, default=1e-4, help="Learning rate")
     parser.add_argument("--num-workers", type=int, default=2, help="DataLoader workers")
     parser.add_argument("--val-split", type=float, default=0.2, help="Validation split ratio")
@@ -218,9 +227,7 @@ def main():
     train_loader = DataLoader(
         train_ds, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers
     )
-    val_loader = DataLoader(
-        val_ds, batch_size=1, shuffle=False, num_workers=args.num_workers
-    )
+    val_loader = DataLoader(val_ds, batch_size=1, shuffle=False, num_workers=args.num_workers)
 
     logger.info(f"Train: {len(train_ds)} subjects | Val: {len(val_ds)} subjects")
 

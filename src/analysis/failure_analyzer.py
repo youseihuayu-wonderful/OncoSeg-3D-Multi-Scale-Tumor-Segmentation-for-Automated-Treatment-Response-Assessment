@@ -48,11 +48,11 @@ class FailureAnalyzer:
         if gt_volume == 0:
             size_category = "no_tumor"
         elif gt_volume < 1000:
-            size_category = "small"       # < 1 cm³
+            size_category = "small"  # < 1 cm³
         elif gt_volume < 10000:
-            size_category = "medium"      # 1-10 cm³
+            size_category = "medium"  # 1-10 cm³
         else:
-            size_category = "large"       # > 10 cm³
+            size_category = "large"  # > 10 cm³
 
         # Classify failure type
         mean_dice = np.mean(list(dice_scores.values()))
@@ -76,19 +76,21 @@ class FailureAnalyzer:
         else:
             seg_type = "balanced"
 
-        self.subjects.append({
-            "subject_id": subject_id,
-            "dice_scores": dice_scores,
-            "mean_dice": mean_dice,
-            "gt_volume_mm3": gt_volume,
-            "pred_volume_mm3": pred_volume,
-            "volume_ratio": volume_ratio,
-            "gt_lesion_count": gt_n,
-            "pred_lesion_count": pred_n,
-            "size_category": size_category,
-            "failure_type": failure_type,
-            "seg_type": seg_type,
-        })
+        self.subjects.append(
+            {
+                "subject_id": subject_id,
+                "dice_scores": dice_scores,
+                "mean_dice": mean_dice,
+                "gt_volume_mm3": gt_volume,
+                "pred_volume_mm3": pred_volume,
+                "volume_ratio": volume_ratio,
+                "gt_lesion_count": gt_n,
+                "pred_lesion_count": pred_n,
+                "size_category": size_category,
+                "failure_type": failure_type,
+                "seg_type": seg_type,
+            }
+        )
 
     def failure_report(self, top_n: int = 10) -> str:
         """Report worst-performing subjects."""
@@ -105,9 +107,15 @@ class FailureAnalyzer:
         good = [s for s in self.subjects if s["failure_type"] == "good"]
 
         lines.append(f"  Total subjects: {len(self.subjects)}")
-        lines.append(f"  Good (Dice≥0.8):     {len(good)} ({len(good)/max(len(self.subjects),1)*100:.0f}%)")
-        lines.append(f"  Moderate (0.5-0.8):  {len(moderate)} ({len(moderate)/max(len(self.subjects),1)*100:.0f}%)")
-        lines.append(f"  Failure (Dice<0.5):  {len(failures)} ({len(failures)/max(len(self.subjects),1)*100:.0f}%)")
+        lines.append(
+            f"  Good (Dice≥0.8):     {len(good)} ({len(good) / max(len(self.subjects), 1) * 100:.0f}%)"
+        )
+        lines.append(
+            f"  Moderate (0.5-0.8):  {len(moderate)} ({len(moderate) / max(len(self.subjects), 1) * 100:.0f}%)"
+        )
+        lines.append(
+            f"  Failure (Dice<0.5):  {len(failures)} ({len(failures) / max(len(self.subjects), 1) * 100:.0f}%)"
+        )
 
         lines.append(f"\n  Worst {top_n} subjects:")
         for s in sorted_subjects[:top_n]:
@@ -123,7 +131,12 @@ class FailureAnalyzer:
 
     def size_stratified_analysis(self) -> str:
         """Analyze performance stratified by tumor size."""
-        categories: dict[str, list[float]] = {"small": [], "medium": [], "large": [], "no_tumor": []}
+        categories: dict[str, list[float]] = {
+            "small": [],
+            "medium": [],
+            "large": [],
+            "no_tumor": [],
+        }
 
         for s in self.subjects:
             categories[s["size_category"]].append(s["mean_dice"])
@@ -168,11 +181,15 @@ class FailureAnalyzer:
         if over:
             mean_ratio = np.mean([s["volume_ratio"] for s in over])
             mean_dice = np.mean([s["mean_dice"] for s in over])
-            lines.append(f"\n  Over-segmented: mean ratio={mean_ratio:.2f}x, mean Dice={mean_dice:.3f}")
+            lines.append(
+                f"\n  Over-segmented: mean ratio={mean_ratio:.2f}x, mean Dice={mean_dice:.3f}"
+            )
 
         if under:
             mean_ratio = np.mean([s["volume_ratio"] for s in under])
             mean_dice = np.mean([s["mean_dice"] for s in under])
-            lines.append(f"  Under-segmented: mean ratio={mean_ratio:.2f}x, mean Dice={mean_dice:.3f}")
+            lines.append(
+                f"  Under-segmented: mean ratio={mean_ratio:.2f}x, mean Dice={mean_dice:.3f}"
+            )
 
         return "\n".join(lines)

@@ -38,17 +38,20 @@ class TestResultAnalyzer:
         rng = np.random.RandomState(42)
         for name, base_dice in [("oncoseg", 0.85), ("unet3d", 0.78), ("swin_unetr", 0.82)]:
             per_subject = rng.normal(base_dice, 0.05, size=(n_subjects, 3)).clip(0, 1)
-            analyzer.load_eval(name, {
-                "dice_ET": float(per_subject[:, 0].mean()),
-                "dice_TC": float(per_subject[:, 1].mean()),
-                "dice_WT": float(per_subject[:, 2].mean()),
-                "dice_mean": float(per_subject.mean()),
-                "hd95_ET": 5.0 - base_dice * 3,
-                "hd95_TC": 4.0 - base_dice * 2,
-                "hd95_WT": 3.0 - base_dice * 1.5,
-                "hd95_mean": 4.0 - base_dice * 2,
-                "per_subject_dice": per_subject.tolist(),
-            })
+            analyzer.load_eval(
+                name,
+                {
+                    "dice_ET": float(per_subject[:, 0].mean()),
+                    "dice_TC": float(per_subject[:, 1].mean()),
+                    "dice_WT": float(per_subject[:, 2].mean()),
+                    "dice_mean": float(per_subject.mean()),
+                    "hd95_ET": 5.0 - base_dice * 3,
+                    "hd95_TC": 4.0 - base_dice * 2,
+                    "hd95_WT": 3.0 - base_dice * 1.5,
+                    "hd95_mean": 4.0 - base_dice * 2,
+                    "per_subject_dice": per_subject.tolist(),
+                },
+            )
 
         return analyzer
 
@@ -145,7 +148,11 @@ class TestFailureAnalyzer:
 
     def test_segmentation_bias(self, analyzer):
         analysis = analyzer.segmentation_bias_analysis()
-        assert "Over-segmentation" in analysis or "Under-segmentation" in analysis or "Balanced" in analysis
+        assert (
+            "Over-segmentation" in analysis
+            or "Under-segmentation" in analysis
+            or "Balanced" in analysis
+        )
 
     def test_size_categorization(self, analyzer):
         categories = {s["size_category"] for s in analyzer.subjects}
@@ -156,8 +163,8 @@ class TestFailureAnalyzer:
 
     def test_failure_types(self, analyzer):
         types = {s["failure_type"] for s in analyzer.subjects}
-        assert "failure" in types   # sub_001 has mean dice 0.35
-        assert "good" in types      # sub_002 has mean dice 0.9
+        assert "failure" in types  # sub_001 has mean dice 0.35
+        assert "good" in types  # sub_002 has mean dice 0.9
 
 
 class TestFigureGenerator:

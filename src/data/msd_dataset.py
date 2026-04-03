@@ -83,13 +83,16 @@ class MSDBrainTumorDataset:
             lbl_path = self.root_dir / entry["label"]
 
             if img_path.exists() and lbl_path.exists():
-                data_dicts.append({
-                    "image": str(img_path),
-                    "label": str(lbl_path),
-                })
+                data_dicts.append(
+                    {
+                        "image": str(img_path),
+                        "label": str(lbl_path),
+                    }
+                )
 
         # Deterministic train/val split
         import random
+
         rng = random.Random(self.seed)
         indices = list(range(len(data_dicts)))
         rng.shuffle(indices)

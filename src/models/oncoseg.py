@@ -57,14 +57,16 @@ class OncoSeg(nn.Module):
         encoder_dims = [embed_dim * (2**i) for i in range(len(depths))]
 
         # Cross-attention skip connections
-        self.cross_attn_skips = nn.ModuleList([
-            CrossAttentionSkip(
-                encoder_dim=encoder_dims[i],
-                decoder_dim=encoder_dims[i],
-                num_heads=num_heads[i],
-            )
-            for i in range(len(depths) - 1)
-        ])
+        self.cross_attn_skips = nn.ModuleList(
+            [
+                CrossAttentionSkip(
+                    encoder_dim=encoder_dims[i],
+                    decoder_dim=encoder_dims[i],
+                    num_heads=num_heads[i],
+                )
+                for i in range(len(depths) - 1)
+            ]
+        )
 
         # Decoder: CNN upsampling path
         self.decoder = CNNDecoder3D(
@@ -159,7 +161,7 @@ class OncoSeg(nn.Module):
             - Modified encoder features (bottleneck replaced with temporal-fused)
             - Raw temporal difference features for downstream analysis
         """
-        bottleneck_t0 = baseline_features[-1]   # [B, C, H, W, D]
+        bottleneck_t0 = baseline_features[-1]  # [B, C, H, W, D]
         bottleneck_t1 = followup_features[-1]
 
         B, C, H, W, D = bottleneck_t0.shape

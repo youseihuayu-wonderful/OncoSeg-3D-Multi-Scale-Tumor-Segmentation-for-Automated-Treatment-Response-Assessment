@@ -26,9 +26,7 @@ class TemporalAttention(nn.Module):
             nn.Linear(feature_dim, feature_dim),
         )
 
-    def forward(
-        self, feat_t0: torch.Tensor, feat_t1: torch.Tensor
-    ) -> torch.Tensor:
+    def forward(self, feat_t0: torch.Tensor, feat_t1: torch.Tensor) -> torch.Tensor:
         """Compute temporal attention between two timepoints.
 
         Args:
@@ -39,9 +37,7 @@ class TemporalAttention(nn.Module):
             Temporal difference features [B, N, C]
         """
         # Cross-attention: t1 attends to t0
-        attended, _ = self.attention(
-            query=feat_t1, key=feat_t0, value=feat_t0
-        )
+        attended, _ = self.attention(query=feat_t1, key=feat_t0, value=feat_t0)
         attended = self.norm(attended + feat_t1)
 
         # Concatenate and project
