@@ -33,14 +33,10 @@ dependencies = [
     # Deep Learning
     "torch>=2.1.0",
     "torchvision>=0.16.0",
+    "einops>=0.7.0",
     # Medical Imaging
     "monai[all]>=1.3.0",
     "nibabel>=5.2.0",
-    "SimpleITK>=2.3.0",
-    "pydicom>=2.4.0",
-    # NLP / Report Generation
-    "transformers>=4.36.0",
-    "tokenizers>=0.15.0",
     # Experiment Management
     "wandb>=0.16.0",
     "hydra-core>=1.3.0",
@@ -67,19 +63,7 @@ dev = [
     "mypy>=1.7.0",
     "pre-commit>=3.6.0",
 ]
-api = [
-    "fastapi>=0.108.0",
-    "uvicorn>=0.25.0",
-    "python-multipart>=0.0.6",
-]
-dashboard = [
-    "streamlit>=1.29.0",
-    "plotly>=5.18.0",
-]
-viewer = [
-    "vtk>=9.3.0",
-]
-all = ["oncoseg[dev,api,dashboard,viewer]"]
+all = ["oncoseg[dev]"]
 
 [project.scripts]
 oncoseg-train = "src.training.trainer:main"
