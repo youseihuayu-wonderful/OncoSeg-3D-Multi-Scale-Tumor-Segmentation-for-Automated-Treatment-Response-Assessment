@@ -41,8 +41,13 @@ class Trainer:
         self.val_loader = val_loader
         self.cfg = cfg
 
-        # Device
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        # Device — CUDA > MPS (Apple Silicon) > CPU
+        if torch.cuda.is_available():
+            self.device = torch.device("cuda")
+        elif torch.backends.mps.is_available():
+            self.device = torch.device("mps")
+        else:
+            self.device = torch.device("cpu")
         self.model = self.model.to(self.device)
 
         # Loss
@@ -86,9 +91,13 @@ class Trainer:
 
         pbar = tqdm(self.train_loader, desc=f"Epoch {epoch}")
         for batch in pbar:
-            images = torch.cat(
-                [batch[k] for k in ["t1n", "t1c", "t2w", "t2f"]], dim=1
-            ).to(self.device)
+            # Support both BraTS (separate modality keys) and MSD (single "image" key)
+            if "image" in batch:
+                images = batch["image"].to(self.device)
+            else:
+                images = torch.cat(
+                    [batch[k] for k in ["t1n", "t1c", "t2w", "t2f"]], dim=1
+                ).to(self.device)
             labels = batch["label"].to(self.device)
 
             self.optimizer.zero_grad()
@@ -123,9 +132,12 @@ class Trainer:
         self.dice_metric.reset()
 
         for batch in tqdm(self.val_loader, desc="Validation"):
-            images = torch.cat(
-                [batch[k] for k in ["t1n", "t1c", "t2w", "t2f"]], dim=1
-            ).to(self.device)
+            if "image" in batch:
+                images = batch["image"].to(self.device)
+            else:
+                images = torch.cat(
+                    [batch[k] for k in ["t1n", "t1c", "t2w", "t2f"]], dim=1
+                ).to(self.device)
             labels = batch["label"].to(self.device)
 
             # Sliding window inference for full-resolution validation
@@ -201,27 +213,48 @@ class Trainer:
 @hydra.main(version_base=None, config_path="../../configs", config_name="config")
 def main(cfg: DictConfig):
     """Entry point for training."""
-    from src.data import BraTSDataset, get_train_transforms, get_val_transforms
     from src.models import OncoSeg
 
-    # Data
-    train_ds = BraTSDataset(
-        root_dir=cfg.data.root_dir,
-        split="train",
-        transform=get_train_transforms(roi_size=tuple(cfg.data.roi_size)),
-    ).get_dataset()
+    num_workers = cfg.data.get("num_workers", 4)
 
-    val_ds = BraTSDataset(
-        root_dir=cfg.data.root_dir,
-        split="val",
-        transform=get_val_transforms(),
-    ).get_dataset()
+    # Data — select loader based on dataset name
+    if cfg.data.name == "msd_brain":
+        from src.data.msd_dataset import MSDBrainTumorDataset
+        from src.data.msd_transforms import get_msd_train_transforms, get_msd_val_transforms
+
+        train_ds = MSDBrainTumorDataset(
+            root_dir=cfg.data.root_dir,
+            split="train",
+            transform=get_msd_train_transforms(roi_size=tuple(cfg.data.roi_size)),
+            cache_rate=cfg.data.get("cache_rate", 0.0),
+        ).get_dataset()
+
+        val_ds = MSDBrainTumorDataset(
+            root_dir=cfg.data.root_dir,
+            split="val",
+            transform=get_msd_val_transforms(),
+            cache_rate=0.0,
+        ).get_dataset()
+    else:
+        from src.data import BraTSDataset, get_train_transforms, get_val_transforms
+
+        train_ds = BraTSDataset(
+            root_dir=cfg.data.root_dir,
+            split="train",
+            transform=get_train_transforms(roi_size=tuple(cfg.data.roi_size)),
+        ).get_dataset()
+
+        val_ds = BraTSDataset(
+            root_dir=cfg.data.root_dir,
+            split="val",
+            transform=get_val_transforms(),
+        ).get_dataset()
 
     train_loader = DataLoader(
-        train_ds, batch_size=cfg.training.batch_size, shuffle=True, num_workers=4
+        train_ds, batch_size=cfg.training.batch_size, shuffle=True, num_workers=num_workers
     )
     val_loader = DataLoader(
-        val_ds, batch_size=1, shuffle=False, num_workers=4
+        val_ds, batch_size=1, shuffle=False, num_workers=num_workers
     )
 
     # Model

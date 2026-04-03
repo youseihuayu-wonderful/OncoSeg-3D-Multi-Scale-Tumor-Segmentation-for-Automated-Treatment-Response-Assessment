@@ -1,0 +1,20 @@
+name: msd_brain
+root_dir: data/raw/Task01_BrainTumour
+roi_size: [128, 128, 128]
+pixdim: [1.0, 1.0, 1.0]
+cache_rate: 0.0
+num_workers: 2
+
+# MSD Brain Tumor label mapping (same BraTS convention after transform)
+num_classes: 4
+class_names:
+  - background
+  - ncr_net      # Necrotic / Non-Enhancing Tumor Core
+  - edema        # Peritumoral Edema
+  - enhancing    # GD-Enhancing Tumor
+
+# Evaluation regions (after ConvertToMultiChannelBasedOnBratsClasses)
+regions:
+  ET: [2]           # Enhancing Tumor (channel 2)
+  TC: [1]           # Tumor Core (channel 1)
+  WT: [0]           # Whole Tumor (channel 0)
