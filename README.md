@@ -5,7 +5,7 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![PyTorch 2.1+](https://img.shields.io/badge/PyTorch-2.1+-ee4c2c.svg)](https://pytorch.org/)
 [![MONAI 1.3+](https://img.shields.io/badge/MONAI-1.3+-green.svg)](https://monai.io/)
-[![Tests](https://img.shields.io/badge/tests-31%20passed-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/tests-46%20passed-brightgreen.svg)]()
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ---
@@ -57,14 +57,16 @@ Input: 4-channel 3D MRI [B, 4, 128, 128, 128]
 └──────────────────────────────────────────────────┘
 ```
 
-## Baselines
+## Model Comparison
 
-| Model | Type | Architecture |
-|-------|------|-------------|
-| UNet3D | Pure CNN | 5-level encoder-decoder, channels [32,64,128,256,512] |
-| UNETR | ViT + CNN | Vision Transformer encoder (12 layers, 768-dim) + CNN decoder |
-| Swin UNETR | Swin + CNN | MONAI's Swin Transformer U-Net (standard concatenation skips) |
-| **OncoSeg (Ours)** | **Swin + CNN** | **Cross-attention skips + deep supervision + MC Dropout + temporal attention** |
+| Model | Type | Parameters | Architecture |
+|-------|------|-----------|-------------|
+| **OncoSeg (Ours)** | **Swin + CNN** | **12.1M** | **Cross-attention skips + deep supervision + MC Dropout + temporal attention** |
+| UNet3D | Pure CNN | 19.2M | 5-level encoder-decoder, channels [32,64,128,256,512] |
+| Swin UNETR | Swin + CNN | 62.2M | MONAI's Swin Transformer U-Net (standard concatenation skips) |
+| UNETR | ViT + CNN | 130.8M | Vision Transformer encoder (12 layers, 768-dim) + CNN decoder |
+
+OncoSeg achieves competitive performance with **6x fewer parameters** than UNETR and **5x fewer** than Swin UNETR.
 
 ## Dataset
 
@@ -121,17 +123,24 @@ source .venv/bin/activate
 pip install -e ".[all]"
 ```
 
-### CLI Commands
+### Local Training (Apple Silicon / CPU)
 
 ```bash
-# Train
-oncoseg-train model=oncoseg data=brats2023 training.max_epochs=300
+# Download dataset only (~7.1 GB)
+python train_local.py --download-only
 
-# Evaluate
-oncoseg-eval checkpoint=experiments/oncoseg/best.pth
+# Train with M1-optimized settings
+python train_local.py --epochs 50 --embed-dim 24 --roi-size 96
 
-# Predict (inference on new data)
-oncoseg-predict input=data/raw/brats2023/test checkpoint=experiments/oncoseg/best.pth
+# Train with full model (requires more RAM)
+python train_local.py --epochs 100 --embed-dim 48
+```
+
+### CLI Commands (Hydra)
+
+```bash
+# Train with Hydra config
+python -m src.training.trainer model=oncoseg data=msd_brain training.max_epochs=100
 
 # Run tests
 pytest tests/ -v
@@ -156,7 +165,7 @@ OncoSeg/
 ├── configs/                    # Hydra configuration files
 │   ├── config.yaml             # Default training config
 │   ├── model/                  # oncoseg, unet3d, unetr, swin_unetr
-│   ├── data/                   # brats2023, kits23, lits, btcv
+│   ├── data/                   # brats2023, msd_brain, kits23, lits, btcv
 │   └── experiment/             # brats_oncoseg, brats_ablation
 ├── data/
 │   └── scripts/                # Dataset download & verification scripts
@@ -177,7 +186,8 @@ OncoSeg/
 │   └── inference.py            # Prediction pipeline with uncertainty
 ├── notebooks/
 │   └── OncoSeg_Full_Pipeline.ipynb  # All-in-one Colab notebook
-├── tests/                      # 31 unit tests (models, losses, modules, RECIST)
+├── train_local.py              # Local training script (MPS/CPU)
+├── tests/                      # 46 unit tests (models, losses, modules, RECIST, analysis)
 ├── pyproject.toml              # Dependencies & project config
 └── README.md
 ```
@@ -191,17 +201,17 @@ OncoSeg/
 | Medical Imaging | MONAI 1.3+ |
 | Configuration | Hydra + OmegaConf |
 | Experiment Tracking | Weights & Biases |
-| Testing | pytest (31 tests) |
+| Testing | pytest (46 tests) |
 | Code Quality | Ruff, mypy |
 
 ## Testing
 
 ```bash
 $ pytest tests/ -v
-======================== 31 passed in 26.67s ========================
+======================== 46 passed in 24.16s ========================
 ```
 
-Tests cover: OncoSeg forward pass, deep supervision, all 3 baselines, DiceCE loss, deep supervision loss, cross-attention skip, Swin encoder, RECIST measurement (7 edge cases), response classification (5 scenarios).
+Tests cover: OncoSeg forward pass, deep supervision, all 3 baselines, DiceCE loss, deep supervision loss, cross-attention skip, Swin encoder, UNETR baseline, RECIST measurement (7 edge cases), response classification (5 scenarios), result analysis, failure analysis, figure generation.
 
 ## License
 
