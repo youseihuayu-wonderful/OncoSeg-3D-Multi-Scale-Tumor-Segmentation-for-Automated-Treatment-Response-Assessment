@@ -38,5 +38,4 @@ jobs:
         run: pytest tests/ -v --tb=short
 
       - name: Lint with ruff
-        run: ruff check src/ tests/ --select E,F,I,N,W,UP
-        continue-on-error: true
+        run: ruff check src/ tests/
