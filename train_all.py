@@ -341,7 +341,7 @@ def train_model(name, train_loader, val_loader, device, roi_size,
     ds_loss = DeepSupervisionLoss(base_loss) if is_oncoseg else None
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-5)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=max_epochs, eta_min=1e-6)
-    dice_metric = DiceMetric(include_background=False, reduction="mean_batch")
+    dice_metric = DiceMetric(include_background=True, reduction="mean_batch")
 
     history = {"train_loss": [], "val_dice_tc": [], "val_dice_wt": [], "val_dice_et": [],
                "val_dice_mean": [], "best_dice": 0.0, "best_epoch": 0}

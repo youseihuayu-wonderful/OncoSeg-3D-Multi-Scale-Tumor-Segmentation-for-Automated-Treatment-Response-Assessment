@@ -28,15 +28,15 @@ class SegmentationMetrics:
     REGION_NAMES = ["ET", "TC", "WT"]
 
     def __init__(self):
-        self.dice = DiceMetric(include_background=False, reduction="mean_batch")
+        self.dice = DiceMetric(include_background=True, reduction="mean_batch")
         self.hd95 = HausdorffDistanceMetric(
-            include_background=False, percentile=95, reduction="mean_batch"
+            include_background=True, percentile=95, reduction="mean_batch"
         )
         self.asd = SurfaceDistanceMetric(
-            include_background=False, symmetric=True, reduction="mean_batch"
+            include_background=True, symmetric=True, reduction="mean_batch"
         )
         self.confusion = ConfusionMatrixMetric(
-            include_background=False,
+            include_background=True,
             metric_name=["sensitivity", "specificity"],
             reduction="mean_batch",
         )

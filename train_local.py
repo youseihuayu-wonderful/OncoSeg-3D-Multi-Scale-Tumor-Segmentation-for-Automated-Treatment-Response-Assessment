@@ -143,7 +143,7 @@ def validate(
 ) -> dict[str, float]:
     """Run validation with sliding window inference."""
     model.eval()
-    dice_metric = DiceMetric(include_background=False, reduction="mean_batch")
+    dice_metric = DiceMetric(include_background=True, reduction="mean_batch")
 
     for batch in tqdm(loader, desc="Validation"):
         images = batch["image"].to(device)

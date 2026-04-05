@@ -70,9 +70,9 @@ class Trainer:
         )
 
         # Metrics
-        self.dice_metric = DiceMetric(include_background=False, reduction="mean_batch")
+        self.dice_metric = DiceMetric(include_background=True, reduction="mean_batch")
         self.hd95_metric = HausdorffDistanceMetric(
-            include_background=False, percentile=95, reduction="mean_batch"
+            include_background=True, percentile=95, reduction="mean_batch"
         )
 
         # Tracking
