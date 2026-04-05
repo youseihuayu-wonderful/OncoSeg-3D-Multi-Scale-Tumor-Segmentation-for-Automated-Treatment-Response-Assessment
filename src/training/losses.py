@@ -16,7 +16,7 @@ class DiceCELoss(nn.Module):
         self,
         dice_weight: float = 0.5,
         ce_weight: float = 0.5,
-        softmax: bool = True,
+        sigmoid: bool = True,
         smooth_nr: float = 1e-5,
         smooth_dr: float = 1e-5,
     ):
@@ -26,12 +26,12 @@ class DiceCELoss(nn.Module):
         self.ce_weight = ce_weight
 
         self.dice = DiceLoss(
-            softmax=softmax,
+            sigmoid=sigmoid,
             smooth_nr=smooth_nr,
             smooth_dr=smooth_dr,
             to_onehot_y=False,
         )
-        self.ce = nn.CrossEntropyLoss()
+        self.ce = nn.BCEWithLogitsLoss()
 
     def forward(self, pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
         """Compute combined Dice + CE loss.
@@ -44,7 +44,7 @@ class DiceCELoss(nn.Module):
             Scalar loss value.
         """
         dice_loss = self.dice(pred, target)
-        ce_loss = self.ce(pred, target.argmax(dim=1) if target.dim() == pred.dim() else target)
+        ce_loss = self.ce(pred, target.float())
 
         return self.dice_weight * dice_loss + self.ce_weight * ce_loss
 

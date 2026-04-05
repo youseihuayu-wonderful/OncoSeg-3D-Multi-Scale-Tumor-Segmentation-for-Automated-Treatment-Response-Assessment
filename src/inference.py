@@ -136,8 +136,8 @@ class Predictor:
             overlap=self.overlap,
         )
 
-        probs = torch.softmax(logits, dim=1)
-        seg = probs.argmax(dim=1).squeeze(0).cpu().numpy().astype(np.uint8)
+        probs = torch.sigmoid(logits)
+        seg = (probs > 0.5).squeeze(0).cpu().numpy().astype(np.uint8)
         probs_np = probs.squeeze(0).cpu().numpy()
 
         result = {
@@ -160,7 +160,7 @@ class Predictor:
             enc_features = self.model.encoder(image)
             enc_features[-1] = self.model.mc_dropout(enc_features[-1])
             dec_out = self.model.decoder(enc_features, self.model.cross_attn_skips)
-            prob = torch.softmax(dec_out["pred"], dim=1)
+            prob = torch.sigmoid(dec_out["pred"])
             predictions.append(prob)
 
         self.model.mc_dropout.eval()

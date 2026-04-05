@@ -58,7 +58,7 @@ class Evaluator:
                 overlap=0.5,
             )
 
-            preds = (torch.softmax(preds, dim=1) > 0.5).float()
+            preds = (torch.sigmoid(preds) > 0.5).float()
             self.metrics.update(preds, labels)
 
         results = self.metrics.compute()

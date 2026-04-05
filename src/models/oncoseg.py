@@ -25,7 +25,7 @@ class OncoSeg(nn.Module):
     def __init__(
         self,
         in_channels: int = 4,
-        num_classes: int = 4,
+        num_classes: int = 3,
         embed_dim: int = 48,
         depths: tuple[int, ...] = (2, 2, 6, 2),
         num_heads: tuple[int, ...] = (3, 6, 12, 24),
@@ -192,7 +192,7 @@ class OncoSeg(nn.Module):
             # Apply dropout to bottleneck
             enc_features[-1] = self.mc_dropout(enc_features[-1])
             dec_out = self.decoder(enc_features, self.cross_attn_skips)
-            predictions.append(torch.softmax(dec_out["pred"], dim=1))
+            predictions.append(torch.sigmoid(dec_out["pred"]))
 
         stacked = torch.stack(predictions, dim=0)  # [N, B, C, H, W, D]
         mean_pred = stacked.mean(dim=0)

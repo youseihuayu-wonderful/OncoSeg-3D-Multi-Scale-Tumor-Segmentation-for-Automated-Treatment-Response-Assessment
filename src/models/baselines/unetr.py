@@ -10,7 +10,7 @@ class UNETR(nn.Module):
     def __init__(
         self,
         in_channels: int = 4,
-        num_classes: int = 4,
+        num_classes: int = 3,
         img_size: tuple[int, ...] = (128, 128, 128),
         feature_size: int = 16,
         hidden_size: int = 768,

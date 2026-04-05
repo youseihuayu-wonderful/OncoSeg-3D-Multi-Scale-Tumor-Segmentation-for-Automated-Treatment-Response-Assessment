@@ -157,7 +157,7 @@ def validate(
             overlap=0.25,
         )
 
-        preds = torch.softmax(outputs, dim=1)
+        preds = torch.sigmoid(outputs)
         preds_binary = (preds > 0.5).float()
         dice_metric(y_pred=preds_binary, y=labels)
 
@@ -242,7 +242,7 @@ def main():
 
     model = OncoSeg(
         in_channels=4,
-        num_classes=4,
+        num_classes=3,
         embed_dim=args.embed_dim,
         depths=depths,
         num_heads=num_heads,

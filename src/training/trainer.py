@@ -149,7 +149,7 @@ class Trainer:
                 overlap=0.5,
             )
 
-            preds = torch.softmax(outputs, dim=1)
+            preds = torch.sigmoid(outputs)
             preds_binary = (preds > 0.5).float()
 
             self.dice_metric(y_pred=preds_binary, y=labels)

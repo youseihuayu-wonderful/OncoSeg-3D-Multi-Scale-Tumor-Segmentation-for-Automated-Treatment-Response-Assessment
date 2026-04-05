@@ -10,7 +10,7 @@ class SwinUNETRBaseline(nn.Module):
     def __init__(
         self,
         in_channels: int = 4,
-        num_classes: int = 4,
+        num_classes: int = 3,
         feature_size: int = 48,
         depths: tuple[int, ...] = (2, 2, 2, 2),
         num_heads: tuple[int, ...] = (3, 6, 12, 24),

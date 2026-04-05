@@ -159,7 +159,7 @@ def profile_all_models(
     models = {
         "OncoSeg": OncoSeg(
             in_channels=4,
-            num_classes=4,
+            num_classes=3,
             embed_dim=48,
             depths=(2, 2, 2, 2),
             num_heads=(3, 6, 12, 24),
@@ -167,16 +167,16 @@ def profile_all_models(
         ),
         "OncoSeg (temporal)": OncoSeg(
             in_channels=4,
-            num_classes=4,
+            num_classes=3,
             embed_dim=48,
             depths=(2, 2, 2, 2),
             num_heads=(3, 6, 12, 24),
             deep_supervision=True,
             temporal=True,
         ),
-        "UNet3D": UNet3D(in_channels=4, num_classes=4),
-        "SwinUNETR": SwinUNETRBaseline(in_channels=4, num_classes=4),
-        "UNETR": UNETR(in_channels=4, num_classes=4, img_size=(64, 64, 64)),
+        "UNet3D": UNet3D(in_channels=4, num_classes=3),
+        "SwinUNETR": SwinUNETRBaseline(in_channels=4, num_classes=3),
+        "UNETR": UNETR(in_channels=4, num_classes=3, img_size=(64, 64, 64)),
     }
 
     lines = [

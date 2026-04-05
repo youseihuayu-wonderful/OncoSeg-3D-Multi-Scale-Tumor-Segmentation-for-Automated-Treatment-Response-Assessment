@@ -10,7 +10,7 @@ class UNet3D(nn.Module):
     def __init__(
         self,
         in_channels: int = 4,
-        num_classes: int = 4,
+        num_classes: int = 3,
         features: tuple[int, ...] = (32, 64, 128, 256, 512),
     ):
         super().__init__()
