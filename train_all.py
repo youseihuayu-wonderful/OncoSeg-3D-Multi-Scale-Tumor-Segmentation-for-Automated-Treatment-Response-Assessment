@@ -347,9 +347,27 @@ def train_model(name, train_loader, val_loader, device, roi_size,
                "val_dice_mean": [], "best_dice": 0.0, "best_epoch": 0}
 
     save_path = SAVE_DIR / f"{name}_best.pth"
+    checkpoint_path = SAVE_DIR / f"{name}_checkpoint.pth"
     best_dice = 0.0
+    start_epoch = 1
 
-    for epoch in range(1, max_epochs + 1):
+    # Resume from checkpoint if available
+    if checkpoint_path.exists():
+        logger.info(f"Resuming {name} from checkpoint...")
+        ckpt = torch.load(checkpoint_path, map_location=device, weights_only=False)
+        model.load_state_dict(ckpt["model_state_dict"])
+        optimizer.load_state_dict(ckpt["optimizer_state_dict"])
+        scheduler.load_state_dict(ckpt["scheduler_state_dict"])
+        history = ckpt["history"]
+        best_dice = history["best_dice"]
+        start_epoch = ckpt["epoch"] + 1
+        logger.info(f"Resumed from epoch {ckpt['epoch']} (best Dice: {best_dice:.4f})")
+
+    if start_epoch > max_epochs:
+        logger.info(f"{name} already completed {max_epochs} epochs — skipping")
+        return history
+
+    for epoch in range(start_epoch, max_epochs + 1):
         model.train()
         epoch_loss = 0.0
         pbar = tqdm(train_loader, desc=f"[{name}] Epoch {epoch}/{max_epochs}", leave=False)
@@ -425,7 +443,19 @@ def train_model(name, train_loader, val_loader, device, roi_size,
             if epoch % 10 == 0:
                 logger.info(f"Epoch {epoch} | Loss: {avg_loss:.4f}")
 
+        # Save checkpoint every epoch for resume support
+        torch.save({
+            "epoch": epoch,
+            "model_state_dict": model.state_dict(),
+            "optimizer_state_dict": optimizer.state_dict(),
+            "scheduler_state_dict": scheduler.state_dict(),
+            "history": history,
+        }, checkpoint_path)
+
     logger.info(f"Done. Best Dice: {history['best_dice']:.4f} at epoch {history['best_epoch']}")
+    # Remove checkpoint after successful completion
+    if checkpoint_path.exists():
+        checkpoint_path.unlink()
 
     del model, optimizer, scheduler
     gc.collect()
@@ -485,6 +515,7 @@ def main():
     parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--device", type=str, default="auto", choices=["auto", "cuda", "mps", "cpu"])
     parser.add_argument("--models", type=str, nargs="+", default=["oncoseg", "unet3d", "swin_unetr"])
+    parser.add_argument("--resume", action="store_true", help="Resume from checkpoints (default: auto-detects)")
     args = parser.parse_args()
 
     # Device
@@ -514,16 +545,30 @@ def main():
     train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True, num_workers=0)
     val_loader = DataLoader(val_ds, batch_size=1, shuffle=False, num_workers=0)
 
-    # Train all models
+    # Train all models (with resume support)
     all_histories = {}
     start_time = time.time()
 
     for model_name in args.models:
-        all_histories[model_name] = train_model(
+        # Check if model already finished (best exists, no checkpoint)
+        best_path = SAVE_DIR / f"{model_name}_best.pth"
+        ckpt_path = SAVE_DIR / f"{model_name}_checkpoint.pth"
+        history_path = SAVE_DIR / f"{model_name}_history.json"
+        if best_path.exists() and not ckpt_path.exists() and history_path.exists():
+            logger.info(f"\n{model_name} already completed — loading saved history")
+            with open(history_path) as f:
+                all_histories[model_name] = json.load(f)
+            continue
+
+        history = train_model(
             model_name, train_loader, val_loader, device, roi_size,
             max_epochs=args.epochs, lr=args.lr, val_interval=args.val_interval,
             embed_dim=args.embed_dim,
         )
+        # Save history so completed models can be skipped on restart
+        with open(history_path, "w") as f:
+            json.dump(history, f, indent=2)
+        all_histories[model_name] = history
 
     total_time = time.time() - start_time
 
