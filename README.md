@@ -104,6 +104,18 @@ All metrics computed per BraTS region: Enhancing Tumor (ET), Tumor Core (TC), Wh
 | UNETR baseline | N/A | N/A | ViT encoder reference |
 | Swin UNETR baseline | N/A | N/A | Same encoder, standard skips |
 
+## Results
+
+### Segmentation Performance (MSD Brain Tumor, 96 val subjects)
+
+| Model | Dice TC | Dice WT | Dice ET | Dice Mean | Params |
+|-------|---------|---------|---------|-----------|--------|
+| **OncoSeg** | _TBD_ | _TBD_ | _TBD_ | _TBD_ | 2.9M |
+| UNet3D | _TBD_ | _TBD_ | _TBD_ | _TBD_ | ~3M |
+| SwinUNETR | _TBD_ | _TBD_ | _TBD_ | _TBD_ | ~12M |
+
+> Results will be updated after training completes. See `experiments/local_results/` for raw outputs.
+
 ## Quick Start — Google Colab
 
 The easiest way to run OncoSeg (no local GPU required):

@@ -185,7 +185,39 @@ Statistical significance was assessed using paired Wilcoxon signed-rank tests (�
 
 ## 4. Results
 
-*[To be filled with real training results]*
+### 4.1 Segmentation Performance
+
+Table 1 reports Dice scores and Hausdorff Distance (HD95) on the MSD Brain Tumor validation set (96 subjects) for each model and tumor region.
+
+**Table 1. Segmentation results on MSD Brain Tumor (mean ± std)**
+
+| Model | Dice TC | Dice WT | Dice ET | Dice Mean | HD95 (mm) | Params |
+|-------|---------|---------|---------|-----------|-----------|--------|
+| OncoSeg | _TBD_ | _TBD_ | _TBD_ | _TBD_ | _TBD_ | 2.9M |
+| UNet3D | _TBD_ | _TBD_ | _TBD_ | _TBD_ | _TBD_ | ~3M |
+| SwinUNETR | _TBD_ | _TBD_ | _TBD_ | _TBD_ | _TBD_ | ~12M |
+
+### 4.2 Ablation Study
+
+Table 2 reports the contribution of each OncoSeg component.
+
+**Table 2. Ablation study — Mean Dice on MSD Brain Tumor**
+
+| Configuration | Dice Mean | Delta |
+|---------------|-----------|-------|
+| OncoSeg (full) | _TBD_ | — |
+| w/o cross-attention skips | _TBD_ | _TBD_ |
+| w/o deep supervision | _TBD_ | _TBD_ |
+
+### 4.3 Training Dynamics
+
+![Training curves](../experiments/local_results/training_curves.png)
+
+Figure 1 shows training loss and validation Dice over 50 epochs. _TBD: describe convergence behavior._
+
+### 4.4 Treatment Response Assessment
+
+RECIST 1.1 automated measurements were validated on synthetic test cases. _TBD: report concordance with manual measurements if clinical data is available._
 
 ## References
 
