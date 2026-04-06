@@ -110,11 +110,11 @@ All metrics computed per BraTS region: Enhancing Tumor (ET), Tumor Core (TC), Wh
 
 | Model | Dice TC | Dice WT | Dice ET | Dice Mean | Params |
 |-------|---------|---------|---------|-----------|--------|
-| **OncoSeg** | _TBD_ | _TBD_ | _TBD_ | _TBD_ | 2.9M |
-| UNet3D | _TBD_ | _TBD_ | _TBD_ | _TBD_ | ~3M |
-| SwinUNETR | _TBD_ | _TBD_ | _TBD_ | _TBD_ | ~12M |
+| **OncoSeg** | **0.7898** | **0.8529** | **0.7481** | **0.7969** | 3.7M |
+| UNet3D | _training_ | _training_ | _training_ | _training_ | 19.2M |
+| SwinUNETR | _pending_ | _pending_ | _pending_ | _pending_ | 62.2M |
 
-> Results will be updated after training completes. See `experiments/local_results/` for raw outputs.
+> OncoSeg trained for 50 epochs on MSD Brain Tumor (388 train / 96 val subjects) with embed_dim=24, roi_size=96, Apple Silicon MPS. Baseline results will be updated as training completes. See `experiments/local_results/` for raw outputs.
 
 ## Quick Start — Google Colab
 

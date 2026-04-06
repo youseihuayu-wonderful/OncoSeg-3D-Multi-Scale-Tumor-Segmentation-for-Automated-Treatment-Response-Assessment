@@ -191,11 +191,11 @@ Table 1 reports Dice scores and Hausdorff Distance (HD95) on the MSD Brain Tumor
 
 **Table 1. Segmentation results on MSD Brain Tumor (mean ± std)**
 
-| Model | Dice TC | Dice WT | Dice ET | Dice Mean | HD95 (mm) | Params |
-|-------|---------|---------|---------|-----------|-----------|--------|
-| OncoSeg | _TBD_ | _TBD_ | _TBD_ | _TBD_ | _TBD_ | 2.9M |
-| UNet3D | _TBD_ | _TBD_ | _TBD_ | _TBD_ | _TBD_ | ~3M |
-| SwinUNETR | _TBD_ | _TBD_ | _TBD_ | _TBD_ | _TBD_ | ~12M |
+| Model | Dice TC | Dice WT | Dice ET | Dice Mean | Params |
+|-------|---------|---------|---------|-----------|--------|
+| OncoSeg | 0.7898 ± 0.1962 | 0.8529 ± 0.1263 | 0.7481 | 0.7969 | 3.7M |
+| UNet3D | _training_ | _training_ | _training_ | _training_ | 19.2M |
+| SwinUNETR | _pending_ | _pending_ | _pending_ | _pending_ | 62.2M |
 
 ### 4.2 Ablation Study
 
