@@ -1,390 +1,171 @@
-# OncoSeg Project — Complete Q&A Coverage
+# OncoSeg — Interview Questions: How the Project Was Built
 
-Every question below covers a specific part of the project. Organized by what was actually built, step by step.
-
----
-
-## 1. Project Structure & Setup
-
-**Q: How is the project organized?**
-> Modular Python package: `src/models/`, `src/data/`, `src/training/`, `src/evaluation/`, `src/response/`, `src/analysis/`. Hydra YAML configs under `configs/`. Tests under `tests/`. Entry points: `train_local.py`, `train_all.py`, `src/inference.py`.
-
-**Q: Why use pyproject.toml instead of setup.py?**
-> Modern Python packaging standard (PEP 621). Declares all dependencies, build backend (setuptools), and tool configs (pytest, ruff) in one file. CI installs with `pip install -e ".[all]"`.
-
-**Q: Why Hydra for configuration management?**
-> Hierarchical YAML configs for model, data, and experiment settings. Swap models with `--config-name=unet3d`. Configs are logged automatically for reproducibility. Supports command-line overrides.
+Questions a hiring manager would ask about how you designed, built, and iterated on this project. Answer in first person — tell the story of building it.
 
 ---
 
-## 2. MSD Brain Tumor Dataset
+## Getting Started
 
-**Q: What is the MSD Brain Tumor dataset?**
-> Medical Segmentation Decathlon Task01. 484 subjects, each with 4 MRI modalities (FLAIR, T1, T1ce, T2) stored as a single 4D NIfTI file. Labels: 0=background, 1=edema, 2=non-enhancing tumor, 3=enhancing tumor.
+**Q1: What made you decide to build this project?**
+> Tumor measurement in clinical trials is a huge bottleneck — radiologists manually measure lesions using RECIST criteria, which is slow, subjective, and error-prone. I wanted to automate both the segmentation and the response assessment in one pipeline.
 
-**Q: How do you load a 4D NIfTI file with 4 modalities?**
-> `LoadImaged` from MONAI reads the file. `EnsureChannelFirstd` places channels first. The 4 modalities become 4 input channels to the model, similar to RGB+alpha.
+**Q2: How did you decide on the tech stack?**
+> PyTorch was a given for deep learning. I chose MONAI because it's the standard for medical imaging — provides validated transforms, losses, and network components. Hydra for config management because I needed to swap models and datasets easily. W&B for experiment tracking.
 
-**Q: How do you convert MSD labels into multi-channel format?**
-> Custom `ConvertMSDToMultiChanneld` transform:
-> - TC (Tumor Core) = labels 2 + 3
-> - WT (Whole Tumor) = labels 1 + 2 + 3
-> - ET (Enhancing Tumor) = label 3
-> Result: 3 binary channel masks for multi-label sigmoid training.
+**Q3: How did you plan the project architecture before writing any code?**
+> I broke it into clear phases: (1) project structure and configs, (2) data loading, (3) model architecture, (4) training pipeline, (5) evaluation, (6) RECIST assessment, (7) testing, (8) notebook for reproducibility. Each phase builds on the previous one.
 
-**Q: Why 3 channels and not 4 (with background)?**
-> Background is implicit — any voxel not predicted as TC/WT/ET is background. Sigmoid multi-label doesn't need an explicit background channel. This also reduces computation.
+**Q4: Why did you start with project structure before any ML code?**
+> Having the right structure from the start saves refactoring later. I set up pyproject.toml, Hydra configs, the src/ package layout, and the test directory first. This meant when I wrote the model code, it already had a home and a config to go with it.
 
 ---
 
-## 3. BraTS Dataset Support
+## Data Pipeline
 
-**Q: How does BraTS differ from MSD in data format?**
-> BraTS stores each modality as a separate NIfTI file (4 files per subject). MSD stores all 4 modalities in one 4D file. Different loaders handle each format.
+**Q5: Walk me through how you built the data pipeline.**
+> First I studied the MSD dataset format — 4D NIfTI files with 4 MRI modalities. I wrote a custom dataset class that reads these files and a transform to convert the integer labels (0,1,2,3) into multi-channel binary masks (TC, WT, ET). Then I added BraTS support separately because it stores modalities as separate files.
 
-**Q: What does `brats_dataset.py` do differently from `msd_dataset.py`?**
-> BraTS loader reads 4 separate files and stacks them. MSD loader reads one 4D file. Both produce the same output: [4, H, W, D] image tensor + [3, H, W, D] label tensor.
+**Q6: What was the trickiest part of the preprocessing?**
+> Getting the label conversion right. MSD labels are integers {0,1,2,3} but the tumor regions overlap — whole tumor contains tumor core which contains enhancing tumor. I had to convert to 3 binary channels where each channel independently says "is this voxel part of this region?" This directly drove the decision to use sigmoid instead of softmax.
 
----
-
-## 4. Preprocessing Transforms
-
-**Q: What preprocessing pipeline do you apply?**
-> 1. Load NIfTI → 2. Ensure channel-first → 3. Convert labels to multi-channel → 4. Orient to RAS → 5. Resample to 1mm isotropic → 6. Z-score normalize (nonzero voxels, per channel) → 7. Crop foreground → 8. Pad to minimum roi_size → 9. Random crop to roi_size.
-
-**Q: Why normalize only nonzero voxels?**
-> Brain MRI has large background regions (air = 0). Including zeros would skew the mean and standard deviation. Normalizing only brain tissue voxels gives meaningful intensity statistics.
-
-**Q: What augmentations do you use during training?**
-> Random flips (all 3 axes), random 90-degree rotations, random intensity scaling (±10%), random intensity shifting (±10%). No elastic deformation — too expensive in 3D.
-
-**Q: Why orient to RAS before anything else?**
-> RAS (Right-Anterior-Superior) is the standard neuroimaging convention. Different scanners may store data in different orientations. Standardizing ensures consistent spatial operations.
+**Q7: How did you decide on the augmentation strategy?**
+> I kept it simple — random flips, rotations, and intensity variations. I avoided elastic deformation because it's computationally expensive in 3D and the benefit is marginal for brain tumors. The augmentations I chose are fast and address the main sources of variation in MRI data.
 
 ---
 
-## 5. OncoSeg Model Architecture
+## Model Architecture
 
-**Q: What is the OncoSeg encoder?**
-> MONAI's SwinTransformer with patch_size=(4,4,4), shifted windows of size (7,7,7). 4 stages with depths (2,2,2,2) and increasing channel dimensions (embed_dim * 1, 2, 4, 8). Outputs hierarchical feature maps at 4 resolutions.
+**Q8: Walk me through your thought process designing the OncoSeg architecture.**
+> I started from the observation that brain tumors can be very large — spanning many slices. Pure CNNs have limited receptive fields, so I wanted a Transformer encoder for global context. But Transformers are parameter-heavy, so I paired it with a lightweight CNN decoder. The key innovation is the cross-attention skip connections — instead of just concatenating encoder and decoder features, the decoder learns to selectively attend to the most relevant encoder features.
 
-**Q: What is the OncoSeg decoder?**
-> CNN decoder with transposed convolutions for 2x upsampling at each level. InstanceNorm + LeakyReLU. Cross-attention skip connections fuse encoder features. Final 4x transposed conv restores original resolution.
+**Q9: Why didn't you just use SwinUNETR off the shelf?**
+> SwinUNETR uses simple concatenation for skip connections. I hypothesized that cross-attention would be more effective because it lets the decoder filter noise from the encoder features. To validate this, I included SwinUNETR as a baseline — same encoder, different skip connections. The ablation study is designed to isolate exactly this contribution.
 
-**Q: How do cross-attention skip connections work?**
-> At each decoder level:
-> - Decoder features → Query (Q)
-> - Encoder features → Key (K) and Value (V)
-> - Multi-head attention: decoder selectively attends to relevant encoder features
-> - Followed by FFN with residual connection and LayerNorm
-> This is more selective than simple concatenation — filters noise from encoder.
+**Q10: How did you implement the cross-attention skip connections?**
+> I wrote a `CrossAttentionSkip` module. It flattens the 3D feature maps into sequences, applies LayerNorm, then computes multi-head attention where decoder features are queries and encoder features are keys/values. After the attention, there's a residual connection and an FFN. Then reshape back to 3D. I placed these at each decoder level except the lowest resolution, where a simple addition suffices.
 
-**Q: How is the cross-attention implemented in code?**
-> `CrossAttentionSkip` module: flatten 3D features to sequences, apply LayerNorm, project Q/K/V, compute scaled dot-product attention with multiple heads, reshape back to 3D. Includes residual connection and FFN.
+**Q11: Why did you add Monte Carlo Dropout? Was that planned from the start?**
+> It was planned from the start because in clinical settings, you need to know when the model is uncertain. I put a Dropout3d layer at the bottleneck. During inference, you can run multiple forward passes with dropout enabled — the variance across predictions tells you where the model is uncertain. Clinically, this means a radiologist can focus their review on uncertain regions.
 
-**Q: What is the MC Dropout layer and where is it placed?**
-> `nn.Dropout3d(p=0.1)` applied to the bottleneck (deepest encoder features). During inference with `predict_with_uncertainty()`, dropout stays enabled across N forward passes. Variance of predictions = uncertainty map.
+**Q12: How did you decide on deep supervision?**
+> Deep supervision helps with gradient flow in deep networks and forces intermediate features to be semantically meaningful. I added auxiliary loss heads at each decoder resolution. The weights decay exponentially — deeper outputs get lower weight. It was straightforward to implement and is standard in medical segmentation (nnU-Net uses it too).
 
-**Q: What does deep supervision do in OncoSeg?**
-> Auxiliary `nn.Conv3d(dim, num_classes, 1)` heads at each intermediate decoder resolution. Each head's output is upsampled to full resolution. Loss is computed at all scales with exponentially decaying weights. Only active during training.
+**Q13: Why did you choose those specific baseline models?**
+> Each baseline tests a specific hypothesis. UNet3D is pure CNN — tests if attention mechanisms add value at all. UNETR uses a ViT encoder — tests pure Transformer vs hybrid. SwinUNETR has the same Swin encoder as OncoSeg but standard skips — isolates the contribution of cross-attention. Together, they form a controlled experiment.
 
 ---
 
-## 6. Swin Transformer Encoder Details
+## The Softmax-to-Sigmoid Refactor
 
-**Q: What does `SwinEncoder3D` wrap?**
-> MONAI's `SwinTransformer` for 3D inputs. Takes (B, C, H, W, D) input, outputs list of feature maps at decreasing resolutions. Each stage applies shifted-window self-attention.
+**Q14: Tell me about the biggest refactor you did and why.**
+> I originally used softmax with 4 classes (background + 3 tumor regions). But BraTS tumor regions overlap — a voxel can be part of both TC and WT simultaneously. Softmax forces mutually exclusive predictions, which is fundamentally wrong here. I refactored to sigmoid multi-label: 3 channels, each independently predicting whether a voxel belongs to that region. This touched 15 files — configs, all models, losses, trainer, evaluator, inference.
 
-**Q: Why shifted windows instead of global attention?**
-> Global attention is O(n²) — prohibitive for 3D volumes. Shifted windows compute attention within local windows (O(n)), then shift window positions to enable cross-window communication. Linear complexity with global receptive field.
+**Q15: How did you catch that softmax was wrong?**
+> I was reviewing the label conversion code and realized that WT contains TC which contains ET. If a voxel is ET, it's also TC and WT. Softmax can't express that — it would force the model to pick one class. This is a well-known issue in the BraTS community; the standard approach is sigmoid multi-label.
 
----
+**Q16: What broke during the refactor?**
+> The metrics. I had `include_background=False` in DiceMetric, which was correct when channel 0 was background. But after switching to 3 foreground-only channels (TC, WT, ET), it dropped channel 0 (TC) and left only 2 values. When the code tried to access `scores[2]`, it crashed with IndexError. Training ran for hours before hitting validation and crashing. I fixed it by setting `include_background=True` across all metric computations.
 
-## 7. Baseline Models
-
-**Q: What are the three baselines and why were they chosen?**
-> - **UNet3D**: Pure CNN — tests if attention mechanisms add value
-> - **UNETR**: ViT encoder — tests pure Transformer approach
-> - **SwinUNETR**: Same Swin encoder as OncoSeg but with standard skip connections — isolates the contribution of cross-attention skips
-
-**Q: How are baselines implemented?**
-> Thin wrappers around MONAI's `UNet`, `UNETR`, and `SwinUNETR`. Each wrapper standardizes the interface: `__init__(in_channels, num_classes, ...)` and `forward(x) → {"pred": tensor}`.
+**Q17: What did you learn from that bug?**
+> Always test the full pipeline — train AND validate — before starting long training runs. The bug only appeared during validation, not training. Also, when you do a sweeping refactor, trace every downstream assumption. "include_background=False" made sense in the old formulation but was wrong in the new one.
 
 ---
 
-## 8. Loss Functions
+## Training Pipeline
 
-**Q: What loss function does OncoSeg use?**
-> `DiceCELoss` = 0.5 * DiceLoss(sigmoid=True) + 0.5 * BCEWithLogitsLoss. Dice handles class imbalance; BCE provides stable per-voxel gradients.
+**Q18: How did you build the training loop?**
+> I wrote a Trainer class that handles the full lifecycle: loads model and data from Hydra config, sets up AdamW optimizer with cosine annealing scheduler, runs the training loop with gradient clipping, validates periodically with sliding window inference, logs to W&B, and saves checkpoints. It supports CUDA, MPS, and CPU.
 
-**Q: Why BCEWithLogitsLoss instead of CrossEntropyLoss?**
-> Multi-label sigmoid formulation — each channel is an independent binary prediction. BCE operates on each channel separately. CrossEntropy assumes mutually exclusive classes (softmax) which is wrong for overlapping tumor regions.
+**Q19: Why did you build train_all.py separately from the Trainer class?**
+> The Trainer class is tightly coupled to Hydra configs — great for production but heavy for quick experiments. train_all.py is self-contained: it includes its own model definitions, doesn't require Hydra, and trains all 3 models sequentially with one command. I designed it for local M1 training where simplicity matters.
 
-**Q: How does deep supervision loss work?**
-> `DeepSupervisionLoss` wraps the base DiceCELoss. Takes a list of predictions at different scales. Applies exponentially decaying weights: w_i = 0.5^i / sum(weights). Normalized so weights sum to 1.
+**Q20: Tell me about the checkpoint/resume system you built.**
+> Training on M1 takes days — 50 epochs × 388 samples × 3 models. If the machine sleeps or the process crashes, you'd lose everything. So I added per-epoch checkpointing: saves model weights, optimizer state, scheduler state, and full training history. On restart, it detects checkpoints and resumes from the last completed epoch. Models that finished completely are skipped. The checkpoint file is deleted after successful completion to keep things clean.
 
-**Q: What are smooth_nr and smooth_dr in Dice Loss?**
-> Small constants (1e-5) added to numerator and denominator of Dice formula. Prevents division by zero when a region is empty (no tumor). Ensures stable gradients.
-
----
-
-## 9. Training Pipeline
-
-**Q: What does the Trainer class do?**
-> Full training loop: loads model and data from Hydra config, runs AdamW optimizer with CosineAnnealingLR scheduler, trains with sliding window validation, logs to W&B, saves best checkpoint by Dice score.
-
-**Q: Why AdamW over Adam?**
-> AdamW correctly decouples weight decay from gradient updates. In Adam, weight decay interacts with adaptive learning rates incorrectly. AdamW gives better generalization, especially for Transformers.
-
-**Q: Why CosineAnnealingLR?**
-> Smooth learning rate decay from 1e-4 to 1e-6 over training. No sudden drops. Allows fine-tuning in later epochs. Simpler and more predictable than step-based schedules.
-
-**Q: Why gradient clipping at max_norm=1.0?**
-> Transformers can produce large gradients, especially early in training. Clipping caps the gradient norm without changing direction. Stabilizes training.
-
-**Q: How does sliding window validation work?**
-> Full volumes are too large for GPU memory. MONAI's `sliding_window_inference` splits volume into overlapping roi_size patches, runs the model on each, and averages overlapping regions. Overlap=0.25 for validation, 0.5 for testing.
+**Q21: Why save optimizer and scheduler state, not just model weights?**
+> If you only save model weights, resuming resets the learning rate back to the initial value and wipes AdamW's running averages (momentum). The model would essentially start over from a weird point — pretrained weights but freshman optimizer. Saving full state means the resume is seamless.
 
 ---
 
-## 10. train_local.py
+## Evaluation & RECIST
 
-**Q: What is train_local.py for?**
-> Simplified training script for Apple Silicon (MPS) with M1-safe settings: smaller embed_dim, reduced roi_size, num_workers=0. Trains OncoSeg only on MSD data.
+**Q22: How did you design the evaluation pipeline?**
+> I built a SegmentationMetrics class that computes Dice, HD95, ASD, Sensitivity, and Specificity per region. The Evaluator class runs sliding window inference on the test set and feeds predictions to the metrics. I also built a result analyzer for comparing models and a failure analyzer to understand where and why the model fails.
 
-**Q: Why num_workers=0?**
-> MPS on macOS has issues with multiprocessing data loading. Setting workers to 0 avoids fork/spawn crashes. On CUDA, you would use 4-8 workers.
+**Q23: How did you approach building the RECIST assessment without clinical data?**
+> I implemented the RECIST 1.1 algorithm on predicted segmentation masks — find connected components, measure longest axial diameter, compute volume, then classify response (CR/PR/SD/PD) by comparing baseline and follow-up measurements. Since I didn't have paired clinical data, I tested with synthetic geometric cases — empty masks, single voxels, spheres with known volume, cubes. The tests verify the algorithm is correct; clinical validation would come later.
 
----
-
-## 11. train_all.py
-
-**Q: What does train_all.py do?**
-> Self-contained script that trains all 3 models (OncoSeg, UNet3D, SwinUNETR) sequentially on MSD data. Generates training curves, saves results JSON. Optimized for M1 8GB.
-
-**Q: Why is it self-contained (doesn't import from src/)?**
-> Avoids dependency on the full package installation. Can be run standalone. Contains its own OncoSeg implementation, loss functions, and data loading. Useful for quick experiments.
-
-**Q: How does the model factory work?**
-> `build_model(name, roi_size, embed_dim)` returns the requested model. "oncoseg" → OncoSeg, "unet3d" → MONAI UNet, "swin_unetr" → MONAI SwinUNETR. All configured with NUM_CLASSES=3.
-
-**Q: How does checkpoint/resume work?**
-> Every epoch saves to `{model}_checkpoint.pth`: model weights, optimizer state, scheduler state, training history. On restart, loads checkpoint and resumes from last epoch. Completed models (no checkpoint, has best.pth + history.json) are skipped entirely. Checkpoint deleted after successful completion.
-
-**Q: Why save optimizer and scheduler state in the checkpoint?**
-> Without them, resuming would reset learning rate and momentum. AdamW maintains per-parameter running averages (m, v). CosineAnnealing needs to know which epoch it's on. Saving state ensures seamless resume.
+**Q24: What's the limitation of your RECIST implementation?**
+> It depends entirely on segmentation quality — if the segmentation is wrong, the measurement is wrong. It also doesn't handle non-measurable disease or complex multi-lesion scenarios fully. In a real clinical deployment, a radiologist would review the automated measurements. The uncertainty estimation from MC Dropout helps flag cases that need review.
 
 ---
 
-## 12. Evaluation Pipeline
+## Testing & Quality
 
-**Q: What does the Evaluator class do?**
-> Loads a trained model and test data. Runs sliding window inference on each subject. Computes metrics via SegmentationMetrics. Supports multi-seed evaluation for variance estimation. Saves results to JSON.
+**Q25: How did you approach testing a deep learning project?**
+> I test properties, not exact values. For models: check output shapes and that gradients flow. For losses: verify output is scalar, positive, and low for perfect predictions. For RECIST: use geometric shapes with known analytical solutions. I have 46 tests covering models, modules, losses, analysis, and response assessment. CI runs them on every push.
 
-**Q: What metrics does SegmentationMetrics compute?**
-> - Dice Score (DiceMetric) — volumetric overlap
-> - HD95 (HausdorffDistanceMetric, 95th percentile) — worst-case boundary error
-> - ASD (SurfaceDistanceMetric, symmetric) — mean boundary error
-> - Sensitivity and Specificity (ConfusionMatrixMetric)
-> All computed per region (TC, WT, ET) with include_background=True.
+**Q26: Walk me through a test you're proud of.**
+> The RECIST sphere test. I create a binary mask with a sphere of known radius, run RECIST measurement, and verify the computed volume matches 4/3πr³ within tolerance. It tests the full pipeline: connected component detection, volume calculation with anisotropic spacing. Simple setup, catches real bugs.
 
-**Q: Why include_background=True?**
-> With multi-label sigmoid (3 channels: TC, WT, ET), all channels are foreground. include_background=False would drop channel 0 (TC), giving only 2 values instead of 3. This was a real bug that caused IndexError during validation.
-
-**Q: Why HD95 instead of full Hausdorff?**
-> Full Hausdorff is sensitive to single outlier voxels. One misclassified voxel far from the tumor would dominate. 95th percentile ignores the worst 5% — more robust and clinically meaningful.
+**Q27: How do you maintain code quality?**
+> Ruff for linting and formatting — replaces flake8, black, and isort in one tool. Configured in pyproject.toml so everyone uses the same rules. CI enforces it on every push. The test suite catches regressions. Type hints throughout for clarity.
 
 ---
 
-## 13. RECIST Measurement
+## Colab Notebook
 
-**Q: What is RECIST 1.1?**
-> Response Evaluation Criteria in Solid Tumors. Standard protocol for measuring tumor response. Measures longest axial diameter of target lesions. Used in clinical trials to determine if treatment is working.
+**Q28: Why did you build a single self-contained notebook?**
+> Reproducibility and accessibility. Anyone can open it in Google Colab, get a free T4 GPU, and run the entire pipeline — data download, training, evaluation, ablation, RECIST demo, visualization — without installing anything. It's 44 cells that tell the complete story.
 
-**Q: How does `recist.py` work?**
-> Takes a binary segmentation mask. Finds connected components (individual lesions). For each lesion: computes longest axial diameter (max distance across axial slices) and volume (voxel count * voxel spacing). Returns measurements sorted by size.
-
-**Q: How does `classifier.py` determine treatment response?**
-> Compares baseline and follow-up RECIST measurements:
-> - CR (Complete Response): no tumor in follow-up
-> - PR (Partial Response): >30% decrease in sum of diameters
-> - PD (Progressive Disease): >20% increase or new lesions
-> - SD (Stable Disease): neither PR nor PD
-
-**Q: How did you test RECIST with no clinical data?**
-> Synthetic geometric test cases: empty mask (0 diameter), single voxel, sphere (known volume = 4/3πr³), cube (known volume). Verified against analytical solutions. Also tested CR/PR/SD/PD classification logic.
+**Q29: What went wrong with the notebook and how did you fix it?**
+> I ran a macOS `sed -i ''` command to do a find-and-replace in the notebook. It wiped the file to zero bytes. Worse, I committed the empty file before noticing. I recovered it from git history, then applied the fix properly using Python JSON parsing instead of sed. Lesson: never use sed on structured files like JSON.
 
 ---
 
-## 14. Inference Script
+## Infrastructure & DevOps
 
-**Q: What does the Predictor class do?**
-> Loads a trained model checkpoint. Runs sliding window inference on a NIfTI input. Supports standard prediction and MC Dropout uncertainty estimation. Outputs segmentation mask as NIfTI + RECIST measurements.
+**Q30: How did you set up CI/CD?**
+> GitHub Actions workflow that runs on every push to main. Tests on Python 3.11 and 3.12 to catch version-specific issues. Steps: install dependencies, ruff lint check, ruff format check, run pytest. It caught a setuptools build backend issue early on.
 
-**Q: How does MC Dropout uncertainty work at inference?**
-> Run N forward passes (default 10) with dropout enabled. Each pass gives slightly different predictions. Stack all predictions → mean = final prediction, variance = uncertainty map. High variance = model is uncertain.
-
-**Q: What is the output format?**
-> Dictionary with: "segmentation" (uint8 numpy array), "probabilities" (float32), "uncertainty" (float32, if MC Dropout), "recist" (diameter and volume measurements).
+**Q31: How did you add Apple Silicon support?**
+> Added device auto-detection: CUDA → MPS → CPU. Handled MPS-specific issues like constant padding warnings in 3D and disabled multiprocessing data loading (num_workers=0). It's not fast enough for production training but invaluable for local development and testing.
 
 ---
 
-## 15. Analysis Toolkit
+## Debugging Stories
 
-**Q: What does result_analyzer.py do?**
-> Loads evaluation results from JSON. Computes: best Dice summary, comparison table across models, per-region breakdown, convergence analysis, statistical significance tests (Wilcoxon signed-rank).
+**Q32: Tell me about the hardest bug you debugged.**
+> The include_background bug. Training ran for hours, then crashed during validation with a cryptic IndexError. The stack trace pointed to `scores[2]` being out of bounds for a size-2 tensor. I traced it back: DiceMetric with `include_background=False` was dropping channel 0, but after the sigmoid refactor, channel 0 was TC (foreground), not background. Changed to `include_background=True` across 5 files.
 
-**Q: What does failure_analyzer.py do?**
-> Identifies subjects where the model performed worst. Stratifies by tumor size (small/medium/large). Detects segmentation biases (over/under-segmentation). Categorizes failure types.
+**Q33: Tell me about a time you broke something and had to recover.**
+> The notebook corruption. A sed command emptied the 64KB Colab notebook. I'd already committed the empty file. Recovery: `git show <old_commit>:path > file` to restore from history. Applied fixes with proper JSON parsing. Added it as a lesson learned. Now I always use language-appropriate tools for structured file edits.
 
-**Q: What does figures.py generate?**
-> Training loss curves, Dice comparison bar charts, ablation study charts. Publication-ready matplotlib figures with consistent styling.
-
----
-
-## 16. Temporal Attention
-
-**Q: What is temporal attention and what does it do?**
-> Module for comparing baseline and follow-up scans. Takes two encoder feature sequences and computes cross-attention between time points. Detects what changed between scans.
-
-**Q: How is it integrated into OncoSeg?**
-> OncoSeg accepts optional `x_followup` input. When provided, temporal attention is applied to encoder features. Enables automated longitudinal treatment tracking.
-
-**Q: Is temporal attention used in current training?**
-> Not yet — requires paired baseline/follow-up data. The module is implemented and integrated but not exercised in the MSD single-timepoint pipeline.
+**Q34: What was the most impactful one-line change you made?**
+> Changing `softmax=True` to `sigmoid=True` in the Dice Loss config. That single parameter change (along with the rest of the refactor) fixed the fundamental formulation error. The model went from trying to predict mutually exclusive classes to correctly predicting overlapping tumor regions.
 
 ---
 
-## 17. Test Suite
+## Decision-Making
 
-**Q: What do the 46 tests cover?**
-> - `test_models.py` (7): OncoSeg output shape, deep supervision, UNet3D, SwinUNETR, RECIST empty/sphere/classifier
-> - `test_modules.py` (6): CrossAttentionSkip shape/gradient, DeepSupervisionHead, SwinEncoder, UNETR
-> - `test_losses.py` (6): DiceCELoss scalar/positive/perfect/gradient, DeepSupervisionLoss weighted/single
-> - `test_analysis.py` (15): ResultAnalyzer, FailureAnalyzer, FigureGenerator
-> - `test_response.py` (11): RECIST measurer, ResponseClassifier
+**Q35: How did you decide what to build yourself vs use off-the-shelf?**
+> I used MONAI for validated components: SwinTransformer, UNet, standard losses, metrics, transforms. I built custom: cross-attention skip connections (novel contribution), the RECIST pipeline (specific to our use case), the training orchestration (needed checkpoint/resume), and the analysis toolkit. The rule: build what's novel, reuse what's standard.
 
-**Q: How do you test non-deterministic deep learning components?**
-> Test properties, not exact values. Check output shapes, gradient existence (loss.backward doesn't crash), loss is positive, loss is low for perfect prediction. Fixed seeds (42) for reproducibility.
+**Q36: How did you decide between training locally vs Colab?**
+> I built both paths. Colab gives a free T4 GPU — fast enough for publication-grade results in 4-6 hours. Local M1 training is much slower (days) but useful for iterating on code without internet dependency. The checkpoint system made local training feasible despite the long runtime.
 
-**Q: Why test gradient flow?**
-> Ensures loss connects to all model parameters through the computation graph. A broken gradient path means the model won't learn. `loss.backward()` + check `param.grad is not None`.
+**Q37: How did you prioritize what to build?**
+> I followed the dependency chain: structure → data → model → training → evaluation → RECIST → tests → notebook. Each step needed the previous one. Within each step, I built the minimum viable version first, then iterated. Testing came after the core pipeline worked, not after every component.
 
 ---
 
-## 18. CI/CD
+## Collaboration & Communication
 
-**Q: What does the GitHub Actions pipeline do?**
-> Runs on push to main. Installs package on Python 3.11 and 3.12. Runs `ruff check` for linting, `ruff format --check` for formatting, `pytest` for all 46 tests.
+**Q38: How would you explain this project to a non-technical person?**
+> "We built AI that reads brain MRI scans and automatically outlines the tumor. It measures the tumor's size and can track whether it's growing or shrinking during treatment. It also tells doctors how confident it is, so they know when to double-check the AI's work."
 
-**Q: Why test on both Python 3.11 and 3.12?**
-> Ensures compatibility across supported versions. Catches version-specific issues (e.g., type hint syntax changes, deprecated APIs).
+**Q39: If a teammate joined this project tomorrow, how would they get up to speed?**
+> Read the README for the high-level overview. Run the tests to verify the environment. Read the Pipeline Document for detailed architecture. Open the Colab notebook to see the full workflow. The Hydra configs show how components connect. The test files show how each component is used.
 
-**Q: What code quality tools do you use?**
-> Ruff (replaces flake8, black, isort in one tool). Configured in pyproject.toml. Enforces consistent style, import ordering, and catches common bugs.
-
----
-
-## 19. Dataset Download Scripts
-
-**Q: What download scripts exist?**
-> `download_msd.py` (MSD Brain Tumor), `download_kits23.py`, `download_lits.py`, `download_btcv.py`. Each downloads from the official source, extracts, and verifies the dataset structure.
-
----
-
-## 20. Multi-Label Sigmoid Refactor
-
-**Q: Why did you switch from softmax to sigmoid?**
-> BraTS tumor regions overlap: WT ⊃ TC ⊃ ET. Softmax assumes mutually exclusive classes — incorrect. Sigmoid treats each channel as independent binary prediction — correct for overlapping regions.
-
-**Q: What files changed in the refactor?**
-> All model configs (num_classes 4→3), all model defaults, losses (CE→BCE, softmax→sigmoid in DiceLoss), trainer, evaluator, inference, train_local.py, train_all.py, notebook. 15 files total.
-
-**Q: What bug did the refactor introduce?**
-> `include_background=False` in DiceMetric dropped channel 0 (TC), leaving only 2 values. Accessing `scores[2]` caused IndexError. Fixed by setting `include_background=True` since all 3 channels are foreground.
-
----
-
-## 21. Colab Notebook
-
-**Q: What does the Colab notebook contain?**
-> 44 cells in a self-contained pipeline: install dependencies → download MSD data → define model/loss → train OncoSeg + 3 baselines → evaluate with metrics → ablation study → RECIST demo → visualization → statistical tests → save results.
-
-**Q: Why a single notebook instead of scripts?**
-> Colab provides free T4 GPU. Single notebook means no installation or setup — just open and run. Self-contained: includes all model code, not just imports. Ideal for reproducibility and sharing.
-
-**Q: What was the notebook corruption incident?**
-> A macOS `sed -i ''` command accidentally emptied the notebook file. It was committed empty. Restored from git history (commit 7699bdd) and fixes were applied properly using Python JSON parsing instead of sed.
-
----
-
-## 22. Documentation
-
-**Q: What documentation exists?**
-> - `README.md`: Project overview, architecture, results table, quickstart, installation
-> - `docs/Paper_Methods_Draft.md`: 200+ line methods section with references, results templates
-> - `docs/Pipeline_Document.md`: 1300+ line detailed technical document
-> - `docs/AI_Knowledge_Fundamentals.md`: 1500+ line comprehensive AI reference
-> - `docs/Interview_Questions.md`: 100 interview questions with answer points
-> - `docs/Project_QA_Log.md`: This file
-
----
-
-## 23. Model Profiler
-
-**Q: What does model_profiler.py do?**
-> Instantiates all models, counts parameters, measures forward pass time, and reports memory usage. Generates a comparison table showing OncoSeg's efficiency vs baselines.
-
----
-
-## 24. Apple Silicon MPS Support
-
-**Q: How did you add MPS support?**
-> Auto-detection: `torch.backends.mps.is_available()`. Device selection cascade: CUDA → MPS → CPU. Added to trainer, evaluator, inference, train_local.py, train_all.py. Handles MPS-specific warnings (constant padding in 3D).
-
-**Q: What are MPS limitations?**
-> Slower than CUDA for 3D convolutions. Some ops fall back to CPU. No multiprocessing data loading (num_workers=0). Memory limited (8GB shared with system). Not for production training — useful for development.
-
----
-
-## 25. Checkpoint & Resume System
-
-**Q: Why was resume support added?**
-> Training on M1 takes days (50 epochs × 388 samples × 3 models). If machine sleeps or process crashes, all progress would be lost. Checkpoint/resume saves every epoch.
-
-**Q: What is saved in each checkpoint?**
-> Model weights (`model_state_dict`), optimizer state (`optimizer_state_dict`), scheduler state (`scheduler_state_dict`), full training history (losses, Dice scores, best epoch).
-
-**Q: How are completed models handled on restart?**
-> If `{model}_best.pth` exists and `{model}_checkpoint.pth` doesn't, the model finished. Its history is loaded from `{model}_history.json` and training is skipped.
-
----
-
-## 26. Results & Figures
-
-**Q: What results are generated after training?**
-> - `results.json`: config + per-model best Dice, best epoch, final loss
-> - `training_curves.png`: loss and Dice plots for all models
-> - `{model}_best.pth`: best model weights by Dice score
-> - Per-model history JSON files
-
-**Q: What does the results table look like?**
-> | Model | Dice TC | Dice WT | Dice ET | Dice Mean | Params |
-> Populated from `results.json` after training completes.
-
----
-
-## 27. Key Technical Decisions Summary
-
-| Decision | What | Why |
-|----------|------|-----|
-| Sigmoid over softmax | Multi-label formulation | Tumor regions overlap (WT ⊃ TC ⊃ ET) |
-| 3 classes, no background | num_classes=3 | Background is implicit in sigmoid |
-| DiceCE loss | Dice + BCE | Class imbalance (Dice) + stable gradients (BCE) |
-| include_background=True | Metrics config | All 3 channels are foreground in multi-label |
-| Cross-attention skips | Encoder-decoder fusion | Selective attention > simple concatenation |
-| MC Dropout at bottleneck | Uncertainty estimation | Clinical need to flag uncertain predictions |
-| InstanceNorm | Normalization | Batch size=1 makes BatchNorm unreliable |
-| Sliding window inference | Full-volume prediction | 3D volumes too large for GPU memory |
-| Checkpoint every epoch | Resume support | Multi-day training on consumer hardware |
-| Hydra configs | Configuration | Reproducibility + easy experiment switching |
+**Q40: What would you do differently next time?**
+> Start with sigmoid from day one — the softmax-to-sigmoid refactor touched 15 files. Add learning rate warmup. Design for multi-GPU from the start. Write integration tests that run train + validate on 2 samples before any long training run. And never use sed on JSON files.
