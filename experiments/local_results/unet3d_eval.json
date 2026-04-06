@@ -1,0 +1,10 @@
+{
+  "model": "unet3d",
+  "eval_dice_tc": 0.7849,
+  "eval_dice_wt": 0.8522,
+  "eval_dice_et": 0.7462,
+  "eval_dice_mean": 0.7944,
+  "num_val_subjects": 96,
+  "roi_size": [96, 96, 96],
+  "note": "trained ~30/50 epochs before OOM crash, best checkpoint used"
+}
