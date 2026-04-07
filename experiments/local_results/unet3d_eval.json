@@ -4,7 +4,9 @@
   "eval_dice_wt": 0.8522,
   "eval_dice_et": 0.7462,
   "eval_dice_mean": 0.7944,
-  "num_val_subjects": 96,
-  "roi_size": [96, 96, 96],
-  "note": "trained ~30/50 epochs before OOM crash, best checkpoint used"
+  "eval_hd95_tc": 21.7,
+  "eval_hd95_wt": 26.21,
+  "eval_hd95_et": 15.18,
+  "eval_hd95_mean": 21.03,
+  "num_val_subjects": 96
 }

@@ -11,7 +11,7 @@ import numpy as np
 import torch
 from monai.data import DataLoader, Dataset
 from monai.inferers import sliding_window_inference
-from monai.metrics import DiceMetric
+from monai.metrics import DiceMetric, HausdorffDistanceMetric
 from monai.transforms import (
     Compose,
     CropForegroundd,
@@ -126,9 +126,11 @@ def main():
     # Evaluate
     roi_size = (96, 96, 96)
     dice_metric = DiceMetric(include_background=True, reduction="mean_batch")
+    hd95_metric = HausdorffDistanceMetric(include_background=True, percentile=95, reduction="mean_batch")
     per_subject_dice = DiceMetric(include_background=True, reduction="none")
 
     all_subject_scores = []
+    hd95_errors = 0
 
     with torch.no_grad():
         for i, batch in enumerate(val_loader):
@@ -143,6 +145,11 @@ def main():
             labels_cpu = labels.cpu()
 
             dice_metric(y_pred=preds_binary, y=labels_cpu)
+
+            try:
+                hd95_metric(y_pred=preds_binary, y=labels_cpu)
+            except Exception:
+                hd95_errors += 1
 
             per_subject_dice.reset()
             per_subject_dice(y_pred=preds_binary, y=labels_cpu)
@@ -164,6 +171,16 @@ def main():
     std_wt = np.std(all_subject_scores[:, 1])
     std_et = np.std(all_subject_scores[:, 2])
 
+    # HD95
+    try:
+        hd95_scores = hd95_metric.aggregate()
+        hd95_tc = float(hd95_scores[0].item())
+        hd95_wt = float(hd95_scores[1].item())
+        hd95_et = float(hd95_scores[2].item())
+        hd95_mean = float(hd95_scores.mean().item())
+    except Exception:
+        hd95_tc = hd95_wt = hd95_et = hd95_mean = -1.0
+
     logger.info(f"\n{'='*60}")
     logger.info("ONCOSEG EVALUATION RESULTS")
     logger.info(f"{'='*60}")
@@ -171,6 +188,12 @@ def main():
     logger.info(f"Dice WT:   {dice_wt:.4f} +/- {std_wt:.4f}")
     logger.info(f"Dice ET:   {dice_et:.4f} +/- {std_et:.4f}")
     logger.info(f"Dice Mean: {dice_mean:.4f}")
+    logger.info(f"HD95 TC:   {hd95_tc:.2f} mm")
+    logger.info(f"HD95 WT:   {hd95_wt:.2f} mm")
+    logger.info(f"HD95 ET:   {hd95_et:.2f} mm")
+    logger.info(f"HD95 Mean: {hd95_mean:.2f} mm")
+    if hd95_errors > 0:
+        logger.info(f"HD95 errors (empty pred/label): {hd95_errors}")
     logger.info(f"{'='*60}")
 
     # Save results
@@ -185,6 +208,10 @@ def main():
         "eval_std_tc": round(float(std_tc), 4),
         "eval_std_wt": round(float(std_wt), 4),
         "eval_std_et": round(float(std_et), 4),
+        "eval_hd95_tc": round(hd95_tc, 2),
+        "eval_hd95_wt": round(hd95_wt, 2),
+        "eval_hd95_et": round(hd95_et, 2),
+        "eval_hd95_mean": round(hd95_mean, 2),
         "num_val_subjects": len(val_data),
         "roi_size": list(roi_size),
         "embed_dim": 24,

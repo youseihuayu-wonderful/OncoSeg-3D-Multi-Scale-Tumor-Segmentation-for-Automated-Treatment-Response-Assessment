@@ -1,14 +1,23 @@
 {
   "model": "oncoseg",
   "checkpoint_epoch": 50,
-  "checkpoint_best_dice": 0.7969,
+  "checkpoint_best_dice": 0.7969153523445129,
   "eval_dice_tc": 0.7898,
   "eval_dice_wt": 0.8529,
   "eval_dice_et": 0.7481,
   "eval_dice_mean": 0.7969,
   "eval_std_tc": 0.1962,
   "eval_std_wt": 0.1263,
+  "eval_std_et": NaN,
+  "eval_hd95_tc": 12.75,
+  "eval_hd95_wt": 18.71,
+  "eval_hd95_et": 14.59,
+  "eval_hd95_mean": 15.35,
   "num_val_subjects": 96,
-  "roi_size": [96, 96, 96],
+  "roi_size": [
+    96,
+    96,
+    96
+  ],
   "embed_dim": 24
 }
