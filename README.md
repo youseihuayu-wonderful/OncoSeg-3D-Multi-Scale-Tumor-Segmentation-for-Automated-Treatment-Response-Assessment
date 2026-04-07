@@ -61,7 +61,7 @@ Input: 4-channel 3D MRI [B, 4, 128, 128, 128]
 
 | Model | Type | Parameters | Architecture |
 |-------|------|-----------|-------------|
-| **OncoSeg (Ours)** | **Swin + CNN** | **12.1M** | **Cross-attention skips + deep supervision + MC Dropout + temporal attention** |
+| **OncoSeg (Ours)** | **Swin + CNN** | **3.7M / 14.0M** | **Cross-attention skips + deep supervision + MC Dropout + temporal attention** |
 | UNet3D | Pure CNN | 19.2M | 5-level encoder-decoder, channels [32,64,128,256,512] |
 | Swin UNETR | Swin + CNN | 62.2M | MONAI's Swin Transformer U-Net (standard concatenation skips) |
 | UNETR | ViT + CNN | 130.8M | Vision Transformer encoder (12 layers, 768-dim) + CNN decoder |
@@ -110,11 +110,20 @@ All metrics computed per BraTS region: Enhancing Tumor (ET), Tumor Core (TC), Wh
 
 | Model | Dice TC | Dice WT | Dice ET | Dice Mean | Params |
 |-------|---------|---------|---------|-----------|--------|
-| **OncoSeg** | **0.7898** | **0.8529** | **0.7481** | **0.7969** | 3.7M |
+| **OncoSeg** | **0.7898** | **0.8529** | **0.7481** | **0.7969** | **3.7M** |
 | UNet3D | 0.7849 | 0.8522 | 0.7462 | 0.7944 | 19.2M |
-| SwinUNETR | _training_ | _training_ | _training_ | _training_ | 62.2M |
 
-> Trained for 50 epochs on MSD Brain Tumor (388 train / 96 val subjects) with embed_dim=24, roi_size=96, Apple Silicon MPS. OncoSeg outperforms UNet3D on all 3 regions while using 5x fewer parameters. See `experiments/local_results/` for raw outputs.
+OncoSeg outperforms UNet3D on all 3 tumor regions while using **5x fewer parameters** (3.7M vs 19.2M).
+
+> Trained for 50 epochs on MSD Brain Tumor (388 train / 96 val subjects, embed_dim=24, roi_size=96, Apple Silicon MPS). SwinUNETR and UNETR benchmarks require a CUDA GPU — use the Colab notebook for full benchmarking.
+
+### Training Curves
+
+![Training Curves](experiments/local_results/training_curves.png)
+
+### Per-Region Dice Comparison
+
+![Dice Comparison](experiments/local_results/dice_comparison.png)
 
 ## Quick Start — Google Colab
 
