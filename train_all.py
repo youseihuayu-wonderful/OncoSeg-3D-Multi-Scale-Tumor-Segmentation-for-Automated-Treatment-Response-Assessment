@@ -158,9 +158,11 @@ class CrossAttentionSkip(nn.Module):
 class OncoSeg(nn.Module):
     def __init__(self, in_channels=4, num_classes=3, embed_dim=48,
                  depths=(2, 2, 2, 2), num_heads=(3, 6, 12, 24),
-                 window_size=(7, 7, 7), dropout_rate=0.1, deep_supervision=True):
+                 window_size=(7, 7, 7), dropout_rate=0.1, deep_supervision=True,
+                 use_cross_attention=True):
         super().__init__()
         self.deep_supervision = deep_supervision
+        self.use_cross_attention = use_cross_attention
         self.num_classes = num_classes
 
         self.encoder = SwinTransformer(
@@ -170,10 +172,13 @@ class OncoSeg(nn.Module):
         )
         dims = [embed_dim * (2**i) for i in range(len(depths))]
 
-        self.cross_attn_skips = nn.ModuleList([
-            CrossAttentionSkip(dims[i], dims[i], num_heads=max(dims[i] // 48, 1))
-            for i in range(1, len(dims) - 1)
-        ])
+        if use_cross_attention:
+            self.cross_attn_skips = nn.ModuleList([
+                CrossAttentionSkip(dims[i], dims[i], num_heads=max(dims[i] // 48, 1))
+                for i in range(1, len(dims) - 1)
+            ])
+        else:
+            self.cross_attn_skips = None
 
         self.decoders = nn.ModuleList()
         reversed_dims = list(reversed(dims))
@@ -215,7 +220,7 @@ class OncoSeg(nn.Module):
             skip = stage_features[skip_idx]
             if x_dec.shape[2:] != skip.shape[2:]:
                 x_dec = F.interpolate(x_dec, size=skip.shape[2:], mode="trilinear", align_corners=False)
-            if skip_idx > 0:
+            if skip_idx > 0 and self.use_cross_attention:
                 x_dec = self.cross_attn_skips[skip_idx - 1](encoder_feat=skip, decoder_feat=x_dec)
             else:
                 x_dec = x_dec + skip
@@ -242,11 +247,28 @@ class OncoSeg(nn.Module):
 NUM_CLASSES = 3
 
 def build_model(name, roi_size, embed_dim=48):
-    if name == "oncoseg":
-        return OncoSeg(
+    # OncoSeg baseline + ablation variants. All variants share the same
+    # encoder/decoder layout so per-variant Dice scores are directly comparable
+    # to the baseline OncoSeg run.
+    if name.startswith("oncoseg"):
+        kwargs = dict(
             in_channels=4, num_classes=NUM_CLASSES, embed_dim=embed_dim,
-            depths=(2, 2, 2, 2), num_heads=(3, 6, 12, 24), deep_supervision=True,
+            depths=(2, 2, 2, 2), num_heads=(3, 6, 12, 24),
+            deep_supervision=True, dropout_rate=0.1, use_cross_attention=True,
         )
+        if name == "oncoseg":
+            pass  # baseline — all knobs at default
+        elif name == "oncoseg_no_xattn":
+            kwargs["use_cross_attention"] = False
+        elif name == "oncoseg_no_ds":
+            kwargs["deep_supervision"] = False
+        elif name == "oncoseg_no_mcdrop":
+            kwargs["dropout_rate"] = 0.0
+        elif name == "oncoseg_small":
+            kwargs["embed_dim"] = max(embed_dim // 2, 6)
+        else:
+            raise ValueError(f"Unknown OncoSeg variant: {name}")
+        return OncoSeg(**kwargs)
     elif name == "unet3d":
         return UNet(
             spatial_dims=3, in_channels=4, out_channels=NUM_CLASSES,
