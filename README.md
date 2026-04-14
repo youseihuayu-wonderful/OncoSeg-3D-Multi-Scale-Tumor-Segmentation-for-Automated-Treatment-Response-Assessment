@@ -127,6 +127,27 @@ OncoSeg outperforms UNet3D on **all metrics** (Dice and HD95) across all 3 tumor
 
 ![Dice Comparison](experiments/local_results/dice_comparison.png)
 
+### Qualitative Comparison (best / median / worst cases)
+
+![Qualitative](figures/qualitative_comparison.png)
+
+OncoSeg predictions track GT boundaries even on the median case (Dice 0.85); the worst case (Dice 0.24, BRATS_077) exhibits a small, diffuse ET region that both models under-segment — see failure-mode breakdown in `experiments/local_results/failure_analysis.json` (dominant failure region: **TC**, relative drop 79.7% on bottom-5 cases).
+
+### MC Dropout Uncertainty (median case)
+
+![Uncertainty](figures/uncertainty_map.png)
+
+Uncertainty concentrates along tumor boundaries, matching the regions of highest prediction error. The model is **well-calibrated** (ECE = 0.0101, 15-bin reliability):
+
+![Calibration](figures/uncertainty_calibration.png)
+![Uncertainty vs Error](figures/uncertainty_vs_error.png)
+
+### End-to-End RECIST Response Assessment
+
+![RECIST demo](figures/recist_demo.png)
+
+From a single baseline segmentation, three simulated follow-up scenarios (PR, SD, PD) produce the correct RECIST 1.1 verdicts: SLD -32.9% → **PR**, -8.2% → **SD**, +30.6% → **PD**. See `notebooks/recist_response_demo.ipynb`.
+
 ## Quick Start — Google Colab
 
 The easiest way to run OncoSeg (no local GPU required):
