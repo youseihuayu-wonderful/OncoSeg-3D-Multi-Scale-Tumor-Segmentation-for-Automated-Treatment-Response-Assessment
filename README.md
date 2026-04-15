@@ -133,6 +133,10 @@ OncoSeg outperforms UNet3D on **all metrics** (Dice and HD95) across all 3 tumor
 
 OncoSeg predictions track GT boundaries even on the median case (Dice 0.85); the worst case (Dice 0.24, BRATS_077) exhibits a small, diffuse ET region that both models under-segment — see failure-mode breakdown in `experiments/local_results/failure_analysis.json` (dominant failure region: **TC**, relative drop 79.7% on bottom-5 cases).
 
+**Worst-case root-cause analysis** (`scripts/diagnose_worst_case.py`, full writeup in `docs/Paper_Results_Draft.md` §4): BRATS_077 is a 17.7th-percentile-small tumor with TC occupying only 6.7% of WT, ~3× weaker modality contrast than the median case, and 31 fragmented WT components (vs 14). See `figures/worst_case_comparison.png`.
+
+See `docs/Paper_Results_Draft.md` for the full Results section (accuracy, calibration, failure modes, RECIST pipeline, limitations).
+
 ### MC Dropout Uncertainty (median case)
 
 ![Uncertainty](figures/uncertainty_map.png)

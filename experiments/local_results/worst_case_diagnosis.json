@@ -1,0 +1,191 @@
+{
+  "worst_subject": "BRATS_077",
+  "worst_stats": {
+    "shape": [
+      240,
+      240,
+      155,
+      4
+    ],
+    "regions": {
+      "WT": {
+        "voxels": 36579,
+        "fraction_of_volume": 0.004097110215053763,
+        "modality_means": [
+          972.5226222696083,
+          880.5704092512098,
+          771.9385713114082,
+          682.1569479756145
+        ],
+        "modality_stds": [
+          73.87921965630693,
+          76.58694480148982,
+          126.17615882613443,
+          94.90529004259255
+        ]
+      },
+      "TC": {
+        "voxels": 2466,
+        "fraction_of_volume": 0.00027620967741935485,
+        "modality_means": [
+          907.2445255474453,
+          888.5770478507704,
+          1001.6484184914842,
+          676.4817518248175
+        ],
+        "modality_stds": [
+          78.82977119644312,
+          89.15233839197738,
+          96.65749637439312,
+          127.28356258238004
+        ]
+      },
+      "ET": {
+        "voxels": 314,
+        "fraction_of_volume": 3.5170250896057345e-05,
+        "modality_means": [
+          954.015923566879,
+          852.7388535031847,
+          1016.5828025477707,
+          717.1369426751593
+        ],
+        "modality_stds": [
+          77.05302418626367,
+          80.24402642583118,
+          78.14110923614587,
+          104.16613248811605
+        ]
+      }
+    },
+    "contrast_per_modality": {
+      "mod0": 1.4391636901193308,
+      "mod1": 0.4110024152615007,
+      "mod2": 0.43201675902632214,
+      "mod3": 0.471137805410887
+    },
+    "components": {
+      "WT": {
+        "num_components": 31,
+        "largest_frac": 0.8243527707154378,
+        "mean_size": 1179.967741935484
+      },
+      "TC": {
+        "num_components": 58,
+        "largest_frac": 0.7696674776966748,
+        "mean_size": 42.51724137931034
+      },
+      "ET": {
+        "num_components": 10,
+        "largest_frac": 0.7738853503184714,
+        "mean_size": 31.4
+      }
+    },
+    "location": {
+      "center_offset_norm": 0.19980749204858297,
+      "com": [
+        99.42447852593018,
+        102.37483255419777,
+        51.94614396238279
+      ]
+    },
+    "wt_size_percentile_in_val": 17.708333333333336
+  },
+  "median_subject": "BRATS_425",
+  "median_stats": {
+    "shape": [
+      240,
+      240,
+      155,
+      4
+    ],
+    "regions": {
+      "WT": {
+        "voxels": 60356,
+        "fraction_of_volume": 0.006760304659498208,
+        "modality_means": [
+          233.5409569885347,
+          235.71576976605473,
+          87.54794883690106,
+          386.23061501756246
+        ],
+        "modality_stds": [
+          63.59205580761246,
+          28.768790961633044,
+          33.34039617788701,
+          122.93219873818921
+        ]
+      },
+      "TC": {
+        "voxels": 39093,
+        "fraction_of_volume": 0.00437869623655914,
+        "modality_means": [
+          258.69769523955694,
+          222.45407106131532,
+          85.10482695111656,
+          441.75223185736576
+        ],
+        "modality_stds": [
+          62.32616238011316,
+          23.476855296702876,
+          40.32322544641275,
+          112.41366928525905
+        ]
+      },
+      "ET": {
+        "voxels": 17097,
+        "fraction_of_volume": 0.0019149865591397849,
+        "modality_means": [
+          269.49885944902616,
+          230.81558168099667,
+          119.50558577528221,
+          400.0977949347839
+        ],
+        "modality_stds": [
+          68.19559423310065,
+          23.824210385032046,
+          35.80819958863664,
+          91.02051330017048
+        ]
+      }
+    },
+    "contrast_per_modality": {
+      "mod0": 4.124991531557594,
+      "mod1": 0.09508852977106545,
+      "mod2": 0.43173364069007963,
+      "mod3": 1.1338619980224236
+    },
+    "components": {
+      "WT": {
+        "num_components": 14,
+        "largest_frac": 0.9886838093975744,
+        "mean_size": 4311.142857142857
+      },
+      "TC": {
+        "num_components": 16,
+        "largest_frac": 0.9994372394034737,
+        "mean_size": 2443.3125
+      },
+      "ET": {
+        "num_components": 47,
+        "largest_frac": 0.9914604901444698,
+        "mean_size": 363.7659574468085
+      }
+    },
+    "location": {
+      "center_offset_norm": 0.24964330007862445,
+      "com": [
+        97.61181986877858,
+        65.00717410033799,
+        82.6784743853138
+      ]
+    },
+    "wt_size_percentile_in_val": 36.45833333333333
+  },
+  "likely_causes": [
+    "BRATS_077 has a very small whole tumor (36579 voxels, 17.7th percentile in val cohort, vs 60356 voxels for median case at 36.5th percentile). Small lesions produce a steeper Dice penalty per mis-classified voxel.",
+    "Tumor core is disproportionately small (2466/36579 = 6.7% of WT). This matches the project-wide failure pattern: bottom-5 cases drop most on TC.",
+    "Modality 0 contrast is 1.44 for BRATS_077 vs 4.12 for the median case \u2014 weaker tumor-vs-brain signal.",
+    "Modality 3 contrast is 0.47 for BRATS_077 vs 1.13 for the median case \u2014 weaker tumor-vs-brain signal.",
+    "More fragmented tumor (31 WT components vs 14 for median)."
+  ]
+}
