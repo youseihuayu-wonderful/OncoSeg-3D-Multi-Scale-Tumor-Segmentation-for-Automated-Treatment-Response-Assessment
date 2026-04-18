@@ -243,8 +243,9 @@ class Predictor:
 
         # RECIST measurements
         if measure_recist:
-            # Measure enhancing tumor region (label 3)
-            et_mask = (result["segmentation"] == 3).astype(np.uint8)
+            # Sigmoid output is channel-first [TC, WT, ET]; ET is the enhancing
+            # tumor region targeted by RECIST 1.1.
+            et_mask = result["segmentation"][2].astype(np.uint8)
             lesions = self.measurer.measure_lesions(et_mask, pixdim)
             outputs["recist"] = {
                 "num_lesions": len(lesions),
