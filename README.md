@@ -95,14 +95,18 @@ All metrics computed per BraTS region: Enhancing Tumor (ET), Tumor Core (TC), Wh
 
 ## Ablation Study
 
-| Variant | Cross-Attention Skip | Deep Supervision | Purpose |
-|---------|---------------------|-----------------|---------|
-| OncoSeg (full) | Yes | Yes | Our complete model |
-| OncoSeg (concat skip) | No (additive) | Yes | Test cross-attention contribution |
-| OncoSeg (no DS) | Yes | No | Test deep supervision contribution |
-| UNet3D baseline | N/A | N/A | Pure CNN reference |
-| UNETR baseline | N/A | N/A | ViT encoder reference |
-| Swin UNETR baseline | N/A | N/A | Same encoder, standard skips |
+Comprehensive ablation isolating the contribution of each OncoSeg component:
+
+| Variant | Modification | Purpose |
+|---------|-------------|---------|
+| OncoSeg (full) | None — all components enabled | Baseline |
+| w/o Cross-Attention | Additive skip connections instead of cross-attention | Test cross-attention contribution |
+| w/o Deep Supervision | Deep supervision heads removed | Test auxiliary loss contribution |
+| w/o MC Dropout | Dropout rate set to 0 | Test uncertainty regularization |
+| Small (embed=24) | Half embedding dimension (24 vs 48) | Test model capacity requirement |
+
+Run ablation training: `python scripts/run_ablation.py --epochs 100 --device cuda`
+Or use section 10 of the Colab notebook for GPU training of all 4 variants.
 
 ## Results
 
@@ -146,11 +150,25 @@ Uncertainty concentrates along tumor boundaries, matching the regions of highest
 ![Calibration](figures/uncertainty_calibration.png)
 ![Uncertainty vs Error](figures/uncertainty_vs_error.png)
 
-### End-to-End RECIST Response Assessment
+### End-to-End RECIST Longitudinal Response Assessment
 
 ![RECIST demo](figures/recist_demo.png)
 
-From a single baseline segmentation, three simulated follow-up scenarios (PR, SD, PD) produce the correct RECIST 1.1 verdicts: SLD -32.9% → **PR**, -8.2% → **SD**, +30.6% → **PD**. See `notebooks/recist_response_demo.ipynb`.
+Realistic longitudinal simulation using biologically-motivated tumor evolution models applied to OncoSeg predictions:
+
+| Scenario | Tumor Model | Expected | Verified |
+|----------|------------|----------|----------|
+| Complete Response | Total elimination | CR | CR |
+| Partial Response | Exponential peripheral decay (chemo model) | PR | PR |
+| Stable Disease | Heterogeneous subclonal response | SD | SD |
+| Progressive Disease | Gompertz anisotropic growth | PD | PD |
+
+Unlike simple morphological erosion/dilation, each model reflects real clinical biology:
+- **Exponential decay**: drug penetration gradient — tumor shrinks from periphery inward
+- **Gompertz growth**: saturation-limited expansion preferentially along white matter tracts
+- **Heterogeneous response**: sensitive subclone regresses while resistant clone persists
+
+Multi-timepoint monitoring (4 treatment cycles) demonstrates crossing the PR threshold as cumulative treatment effect increases. See `notebooks/recist_response_demo.ipynb`.
 
 ## Quick Start — Google Colab
 
