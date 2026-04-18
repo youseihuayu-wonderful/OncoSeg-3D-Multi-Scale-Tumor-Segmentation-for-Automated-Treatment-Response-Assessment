@@ -170,6 +170,38 @@ Unlike simple morphological erosion/dilation, each model reflects real clinical 
 
 Multi-timepoint monitoring (4 treatment cycles) demonstrates crossing the PR threshold as cumulative treatment effect increases. See `notebooks/recist_response_demo.ipynb`.
 
+### Longitudinal Validation on LUMIERE (real patient scans)
+
+OncoSeg ships with an end-to-end validator that runs the trained model on
+the [LUMIERE](https://doi.org/10.1038/s41597-022-01881-7) longitudinal GBM
+MRI dataset (91 patients, 638 study dates, expert RANO ratings) and
+compares the predicted RECIST category to the expert assessment per visit.
+
+```bash
+# 1. Download LUMIERE from Figshare (manual — requires registration):
+#    https://springernature.figshare.com/collections/
+#    The_LUMIERE_Dataset_Longitudinal_Glioblastoma_MRI_with_Expert_RANO_Evaluation/5904905
+#    Extract so the tree is /path/to/LUMIERE/Patient-XX/week-NNN/...
+#
+# 2. Run the validator
+python scripts/evaluate_lumiere.py \
+    --lumiere-root /path/to/LUMIERE \
+    --checkpoint experiments/local_results/oncoseg_best.pth
+```
+
+Outputs land under `experiments/lumiere_results/`:
+
+| File | Contents |
+|------|----------|
+| `per_visit.csv` | One row per follow-up: baseline/follow-up sum-LD, % change, predicted + expert category |
+| `summary.json` | Overall accuracy, Cohen kappa, confusion matrix, label distributions |
+| `confusion_matrix.png` | Expert RANO (rows) × OncoSeg prediction (columns) |
+| `run.log` | Per-patient processing log |
+
+The loader (`src/data/lumiere.py`) tolerates missing modalities (a
+timepoint must have all four of T1/CT1/T2/FLAIR to be included) and
+tolerates column-name variants in the clinical CSV.
+
 ## Quick Start — Google Colab
 
 The easiest way to run OncoSeg (no local GPU required):
@@ -177,6 +209,26 @@ The easiest way to run OncoSeg (no local GPU required):
 1. Open `notebooks/OncoSeg_Full_Pipeline.ipynb` in [Google Colab](https://colab.research.google.com)
 2. Set runtime to **GPU** (Runtime > Change runtime type > T4 GPU)
 3. Run all cells — the notebook handles data download, training, evaluation, and visualization
+
+### Benchmarks that require a T4 GPU (not yet filled in)
+
+These three suites are scripted inside the notebook but are too slow on
+Apple Silicon / CPU to run locally. Launch them once you have a Colab T4
+session and the resulting numbers will populate the blanks in
+`docs/Paper_Results_Draft.md` §2 and this README's Results section.
+
+| Suite | What it trains | Expected wall time on T4 | Notebook section |
+|-------|----------------|--------------------------|------------------|
+| SwinUNETR baseline | MONAI SwinUNETR, 50 epochs | ~90 min | *"Baseline — SwinUNETR"* |
+| UNETR baseline | MONAI UNETR, 50 epochs | ~60 min | *"Baseline — UNETR"* |
+| Ablation suite | 4 OncoSeg variants (no_xattn / no_ds / no_mcdrop / small), 30 epochs each | ~4 h total | *"Ablation Study"* |
+
+When the run finishes, download `results.json`, `swinunetr_best.pth`,
+`unetr_best.pth`, and the `ablation_*.pth` files; drop them into
+`experiments/local_results/`. Re-run the notebook's final *"Comparison
+figures"* cell (or `scripts/uncertainty_qualitative_analysis.py` if you
+want the qualitative panel refreshed) to regenerate `figures/dice_comparison.png`
+and the Wilcoxon significance table.
 
 ## Local Installation
 
