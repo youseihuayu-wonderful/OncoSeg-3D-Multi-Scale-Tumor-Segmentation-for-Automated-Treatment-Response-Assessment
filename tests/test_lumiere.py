@@ -1,8 +1,8 @@
 """Unit tests for the LUMIERE dataset loader."""
 
+import nibabel as nib
 import numpy as np
 import pytest
-import nibabel as nib
 
 from src.data.lumiere import (
     ONCOSEG_MODALITIES,
@@ -10,7 +10,6 @@ from src.data.lumiere import (
     flatten_timepoints,
     patients_with_followup,
 )
-
 
 MODALITY_FILENAMES = {
     "t1n": "t1_skull_strip.nii.gz",

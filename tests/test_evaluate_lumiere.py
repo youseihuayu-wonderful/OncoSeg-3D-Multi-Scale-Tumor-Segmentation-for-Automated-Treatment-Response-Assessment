@@ -33,7 +33,6 @@ if str(PROJECT_ROOT) not in sys.path:
 from scripts import evaluate_lumiere as el  # noqa: E402
 from src.response.classifier import ResponseCategory  # noqa: E402
 
-
 # ---------------------------------------------------------------------------
 # Pure-Python helpers
 # ---------------------------------------------------------------------------
