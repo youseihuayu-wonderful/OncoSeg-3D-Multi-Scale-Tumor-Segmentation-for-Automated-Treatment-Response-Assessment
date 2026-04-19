@@ -8,8 +8,7 @@ must instantiate and forward-pass a small CPU tensor to (B, 3, *ROI).
 import pytest
 import torch
 
-from train_all import build_model, NUM_CLASSES
-
+from train_all import NUM_CLASSES, build_model
 
 ROI = (64, 64, 64)
 BATCH = 1
