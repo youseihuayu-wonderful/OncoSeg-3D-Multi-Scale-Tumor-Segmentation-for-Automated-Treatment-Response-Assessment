@@ -26,7 +26,7 @@ from monai.data import DataLoader
 from monai.inferers import sliding_window_inference
 from monai.losses import DiceLoss
 from monai.metrics import DiceMetric
-from monai.networks.nets import UNet, SwinUNETR
+from monai.networks.nets import UNet, UNETR, SwinUNETR
 from monai.transforms import (
     Compose,
     CropForegroundd,
@@ -280,6 +280,17 @@ def build_model(name, roi_size, embed_dim=48):
             in_channels=4, out_channels=NUM_CLASSES,
             feature_size=embed_dim, depths=(2, 2, 2, 2), num_heads=(3, 6, 12, 24),
             norm_name="instance", spatial_dims=3,
+        )
+    elif name == "unetr":
+        # MONAI UNETR requires a fixed img_size; use the training ROI so the
+        # ViT patches tile exactly. Defaults match the reference UNETR paper
+        # (hidden_size=768, mlp_dim=3072, num_heads=12).
+        return UNETR(
+            in_channels=4, out_channels=NUM_CLASSES,
+            img_size=roi_size,
+            feature_size=16, hidden_size=768, mlp_dim=3072,
+            num_heads=12, proj_type="conv", norm_name="instance",
+            res_block=True, dropout_rate=0.1,
         )
     else:
         raise ValueError(f"Unknown model: {name}")
