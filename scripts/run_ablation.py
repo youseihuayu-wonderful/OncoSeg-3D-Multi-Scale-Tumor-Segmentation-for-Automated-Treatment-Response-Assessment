@@ -29,11 +29,11 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from train_all import (  # noqa: E402
+    SAVE_DIR,
     build_data,
     build_model,
-    train_model,
-    SAVE_DIR,
     logger,
+    train_model,
 )
 
 ABLATION_VARIANTS = [

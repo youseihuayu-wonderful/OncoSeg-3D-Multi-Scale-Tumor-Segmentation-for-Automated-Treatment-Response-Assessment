@@ -17,8 +17,6 @@ Labels: 0=Background, 1=Kidney, 2=Tumor, 3=Cyst
 """
 
 import argparse
-import subprocess
-import sys
 from pathlib import Path
 
 
@@ -72,7 +70,7 @@ def verify_dataset(data_dir: Path):
         if img.exists() and seg.exists():
             complete += 1
 
-    print(f"\nKiTS23 Verification")
+    print("\nKiTS23 Verification")
     print(f"  Directory: {dataset_dir}")
     print(f"  Cases found: {len(cases)}")
     print(f"  Complete (img+seg): {complete}")

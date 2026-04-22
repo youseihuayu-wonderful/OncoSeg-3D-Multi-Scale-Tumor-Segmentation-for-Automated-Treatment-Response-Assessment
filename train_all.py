@@ -16,6 +16,7 @@ import time
 from pathlib import Path
 
 import matplotlib
+
 matplotlib.use("Agg")  # Non-interactive backend
 import matplotlib.pyplot as plt
 import numpy as np
@@ -26,7 +27,7 @@ from monai.data import DataLoader
 from monai.inferers import sliding_window_inference
 from monai.losses import DiceLoss
 from monai.metrics import DiceMetric
-from monai.networks.nets import UNet, UNETR, SwinUNETR
+from monai.networks.nets import UNETR, SwinUNETR, UNet
 from monai.transforms import (
     Compose,
     CropForegroundd,
@@ -41,8 +42,8 @@ from monai.transforms import (
     RandScaleIntensityd,
     RandShiftIntensityd,
     RandSpatialCropd,
-    SpatialPadd,
     Spacingd,
+    SpatialPadd,
 )
 from tqdm import tqdm
 
@@ -439,11 +440,15 @@ def train_model(name, train_loader, val_loader, device, roi_size,
                     images = batch["image"].to(device)
                     labels = batch["label"].to(device)
 
+                    # noqa on F821: ruff's scope analysis loses `model` across
+                    # nested defs inside conditional branches; `model` is a local
+                    # from the enclosing train_model() scope (see line 368).
                     if is_oncoseg:
-                        pred_fn = lambda x: model(x)["pred"]
+                        def pred_fn(x):
+                            return model(x)["pred"]  # noqa: F821
                     else:
                         def pred_fn(x):
-                            out = model(x)
+                            out = model(x)  # noqa: F821
                             return out["pred"] if isinstance(out, dict) else out
 
                     preds = sliding_window_inference(

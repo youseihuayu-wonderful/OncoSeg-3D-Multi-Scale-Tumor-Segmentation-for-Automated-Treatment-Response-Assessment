@@ -224,7 +224,6 @@ def main():
     wt_w = worst_stats["regions"]["WT"]["voxels"]
     wt_m = median_stats["regions"]["WT"]["voxels"]
     tc_w = worst_stats["regions"]["TC"]["voxels"]
-    tc_m = median_stats["regions"]["TC"]["voxels"]
     et_w = worst_stats["regions"]["ET"]["voxels"]
 
     reasons = []
@@ -259,7 +258,7 @@ def main():
         )
     if et_w == 0:
         reasons.append(
-            f"Enhancing-tumor volume is zero in GT — Dice on ET is undefined / penalised."
+            "Enhancing-tumor volume is zero in GT — Dice on ET is undefined / penalised."
         )
 
     diagnosis = {

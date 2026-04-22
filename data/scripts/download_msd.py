@@ -8,7 +8,6 @@ This dataset is freely available without registration.
 
 import argparse
 import subprocess
-import sys
 from pathlib import Path
 
 
@@ -24,7 +23,7 @@ def download_and_extract(output_dir: Path):
     url = "https://msd-for-monai.s3-us-west-2.amazonaws.com/Task01_BrainTumour.tar"
     tar_path = output_dir / "Task01_BrainTumour.tar"
 
-    print(f"Downloading MSD Task01_BrainTumour (~7.1 GB)...")
+    print("Downloading MSD Task01_BrainTumour (~7.1 GB)...")
     print(f"Source: {url}")
 
     subprocess.run(
@@ -63,7 +62,7 @@ def verify_dataset(dataset_dir: Path):
     labels_tr = list((dataset_dir / "labelsTr").glob("*.nii.gz"))
     images_ts = list((dataset_dir / "imagesTs").glob("*.nii.gz"))
 
-    print(f"\nFiles found:")
+    print("\nFiles found:")
     print(f"  Training images: {len(images_tr)}")
     print(f"  Training labels: {len(labels_tr)}")
     print(f"  Test images:     {len(images_ts)}")

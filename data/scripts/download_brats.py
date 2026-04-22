@@ -5,7 +5,6 @@ This script provides instructions and verifies the downloaded data.
 """
 
 import argparse
-import hashlib
 from pathlib import Path
 
 
@@ -77,15 +76,15 @@ def main():
     print()
     print("Expected directory structure:")
     print(f"  {output_dir}/")
-    print(f"  ├── train/")
-    print(f"  │   ├── BraTS-GLI-00000-000/")
-    print(f"  │   │   ├── *-t1n.nii.gz")
-    print(f"  │   │   ├── *-t1c.nii.gz")
-    print(f"  │   │   ├── *-t2w.nii.gz")
-    print(f"  │   │   ├── *-t2f.nii.gz")
-    print(f"  │   │   └── *-seg.nii.gz")
-    print(f"  │   └── ...")
-    print(f"  └── val/")
+    print("  ├── train/")
+    print("  │   ├── BraTS-GLI-00000-000/")
+    print("  │   │   ├── *-t1n.nii.gz")
+    print("  │   │   ├── *-t1c.nii.gz")
+    print("  │   │   ├── *-t2w.nii.gz")
+    print("  │   │   ├── *-t2f.nii.gz")
+    print("  │   │   └── *-seg.nii.gz")
+    print("  │   └── ...")
+    print("  └── val/")
     print()
     print("After downloading, verify with:")
     print(f"  python {__file__} --output {output_dir} --verify-only")
