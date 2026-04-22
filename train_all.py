@@ -116,7 +116,7 @@ class DeepSupervisionLoss(nn.Module):
 # =====================================================================
 # OncoSeg Model (self-contained, no imports from src/)
 # =====================================================================
-from monai.networks.nets.swin_unetr import SwinTransformer
+from monai.networks.nets.swin_unetr import SwinTransformer  # noqa: E402, I001  -- sectional import: kept next to OncoSeg model definition below
 
 
 class CrossAttentionSkip(nn.Module):

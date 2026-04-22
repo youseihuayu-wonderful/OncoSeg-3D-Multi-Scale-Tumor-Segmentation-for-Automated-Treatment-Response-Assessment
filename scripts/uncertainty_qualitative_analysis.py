@@ -259,7 +259,8 @@ def build_qualitative_figure(cases_data: dict, save_path: Path):
             fontsize=10,
         )
         for c in range(4):
-            axes[r, c].set_xticks([]); axes[r, c].set_yticks([])
+            axes[r, c].set_xticks([])
+            axes[r, c].set_yticks([])
             if r == 0:
                 axes[r, c].set_title(col_titles[c], fontsize=12)
     fig.suptitle(
@@ -280,7 +281,8 @@ def build_uncertainty_figure(case_data: dict, ent_map: np.ndarray, save_path: Pa
     # Error map: any disagreement across the 3 channels
     err = (pred != gt).any(axis=0).astype(np.float32)
     fig, axes = plt.subplots(1, 4, figsize=(16, 4.5))
-    axes[0].imshow(flair.T, cmap="gray", origin="lower"); axes[0].set_title("FLAIR")
+    axes[0].imshow(flair.T, cmap="gray", origin="lower")
+    axes[0].set_title("FLAIR")
     axes[1].imshow(flair.T, cmap="gray", origin="lower")
     axes[1].imshow(np.transpose(regions_to_rgb(gt), (1, 0, 2)), origin="lower", alpha=0.55)
     axes[1].set_title("Ground Truth")
@@ -292,7 +294,8 @@ def build_uncertainty_figure(case_data: dict, ent_map: np.ndarray, save_path: Pa
     axes[3].imshow(err.T, cmap="Reds", origin="lower")
     axes[3].set_title("Prediction Error")
     for ax in axes:
-        ax.set_xticks([]); ax.set_yticks([])
+        ax.set_xticks([])
+        ax.set_yticks([])
     fig.suptitle(f"Uncertainty quantification — {case_data['subject']}", fontsize=13)
     fig.tight_layout()
     fig.savefig(save_path, dpi=130, bbox_inches="tight")
@@ -313,7 +316,8 @@ def build_calibration_figure(bin_data: list, ece: float, save_path: Path):
     ax.set_xlabel("Predicted probability (confidence)")
     ax.set_ylabel("Empirical accuracy")
     ax.set_title(f"Reliability diagram — ECE = {ece:.4f}")
-    ax.set_xlim(0, 1); ax.set_ylim(0, 1)
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
     ax.legend(loc="upper left")
     ax.grid(alpha=0.3)
     fig.tight_layout()

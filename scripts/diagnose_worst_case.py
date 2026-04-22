@@ -137,10 +137,10 @@ def render_comparison(case_a, case_b, save_path: Path):
     """Side-by-side FLAIR + GT overlay for two cases (worst vs median)."""
     (img_a, lbl_a, name_a), (img_b, lbl_b, name_b) = case_a, case_b
 
-    def best_slice(l):
-        wt = np.isin(l, REGION_SPEC["WT"])
+    def best_slice(lbl):
+        wt = np.isin(lbl, REGION_SPEC["WT"])
         areas = wt.sum(axis=(0, 1))
-        return int(np.argmax(areas)) if areas.max() > 0 else l.shape[-1] // 2
+        return int(np.argmax(areas)) if areas.max() > 0 else lbl.shape[-1] // 2
 
     fig, axes = plt.subplots(2, 3, figsize=(13, 8))
     for row, (img, lbl, name) in enumerate([(img_a, lbl_a, name_a), (img_b, lbl_b, name_b)]):
@@ -162,7 +162,8 @@ def render_comparison(case_a, case_b, save_path: Path):
         axes[row, 2].imshow(np.transpose(rgb, (1, 0, 2)), origin="lower")
         axes[row, 2].set_title(f"{name} — GT overlay")
         for c in range(3):
-            axes[row, c].set_xticks([]); axes[row, c].set_yticks([])
+            axes[row, c].set_xticks([])
+            axes[row, c].set_yticks([])
     fig.suptitle("Worst case (top) vs median case (bottom)", fontsize=13)
     fig.tight_layout()
     fig.savefig(save_path, dpi=130, bbox_inches="tight")
@@ -243,7 +244,8 @@ def main():
     worst_contrast = worst_stats["contrast_per_modality"]
     median_contrast = median_stats["contrast_per_modality"]
     for m in range(4):
-        wc = worst_contrast[f"mod{m}"]; mc = median_contrast[f"mod{m}"]
+        wc = worst_contrast[f"mod{m}"]
+        mc = median_contrast[f"mod{m}"]
         if wc is not None and mc is not None and wc < 0.5 * mc:
             reasons.append(
                 f"Modality {m} contrast is {wc:.2f} for {worst_id} vs {mc:.2f} "

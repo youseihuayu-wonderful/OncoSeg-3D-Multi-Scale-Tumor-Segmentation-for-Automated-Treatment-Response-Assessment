@@ -55,7 +55,7 @@ class ConvertMSDToMultiChanneld(MapTransform):
 
 
 # Import OncoSeg from train_all.py
-import importlib.util
+import importlib.util  # noqa: E402  -- must come after PROJECT_ROOT setup above
 
 spec = importlib.util.spec_from_file_location("train_all", PROJECT_ROOT / "train_all.py")
 train_all = importlib.util.module_from_spec(spec)
