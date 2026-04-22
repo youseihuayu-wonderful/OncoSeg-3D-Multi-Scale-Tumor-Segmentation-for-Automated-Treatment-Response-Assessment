@@ -276,6 +276,64 @@ python data/scripts/download_brats.py --output data/raw/brats2023
 # KiTS23, LiTS, BTCV — see data/scripts/ for instructions
 ```
 
+## REST API (Inference Service)
+
+A FastAPI service wraps the trained model so predictions can be served over HTTP — no Python environment required on the caller side.
+
+### Endpoints
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET`  | `/healthz` | Liveness probe (always 200) |
+| `GET`  | `/readyz` | Reports whether a checkpoint is loaded |
+| `GET`  | `/info` | Model metadata (device, ROI, checkpoint path) |
+| `POST` | `/predict/segment` | Upload 4 NIfTI modalities → segmentation NIfTI file |
+| `POST` | `/predict/measure` | Upload 4 NIfTI modalities → JSON with per-channel stats + RECIST lesions |
+| `POST` | `/predict/response` | Upload 4 baseline + 4 follow-up NIfTIs → CR/PR/SD/PD classification |
+
+### Run locally
+
+```bash
+pip install -e '.[serve]'
+
+oncoseg-serve \
+  --checkpoint experiments/local_results/oncoseg_best.pth \
+  --model-source train_all \
+  --host 0.0.0.0 --port 8000
+```
+
+Interactive OpenAPI docs at `http://localhost:8000/docs`.
+
+### Run in Docker
+
+```bash
+docker build -t oncoseg-api .
+
+docker run --rm -p 8000:8000 \
+  -v $(pwd)/experiments/local_results:/ckpt:ro \
+  -e ONCOSEG_CHECKPOINT=/ckpt/oncoseg_best.pth \
+  oncoseg-api
+
+curl http://localhost:8000/healthz
+# {"status":"ok"}
+```
+
+### Example call
+
+```bash
+curl -X POST http://localhost:8000/predict/measure \
+  -F "t1n=@patient/t1n.nii.gz" \
+  -F "t1c=@patient/t1c.nii.gz" \
+  -F "t2w=@patient/t2w.nii.gz" \
+  -F "t2f=@patient/t2f.nii.gz" \
+  -F "subject_id=patient_001"
+```
+
+### Notes
+
+- Checkpoints saved by `train_all.py` use the inline `OncoSeg` class, so the service defaults to `--model-source train_all`. Use `--model-source src` for checkpoints trained via `src.models.oncoseg.OncoSeg`.
+- The service is tested end-to-end with a deterministic fake predictor (`tests/test_api.py`, 12 tests) so CI doesn't need a GPU or checkpoint.
+
 ## Project Structure
 
 ```
