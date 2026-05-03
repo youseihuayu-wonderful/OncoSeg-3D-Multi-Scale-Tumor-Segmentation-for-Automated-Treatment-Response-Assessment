@@ -281,3 +281,72 @@ class TestBuildPredictorFromCheckpoint:
                 device=torch.device("cpu"),
                 model_source="not_a_real_source",
             )
+
+
+class TestPredictMeasureDicom:
+    def test_dicom_zip_round_trip(self, client):
+        """Four DICOM-series zips (one per modality) should route through
+        /predict/measure/dicom and produce the same RECIST response shape
+        as the NIfTI endpoint."""
+        import io
+        import zipfile
+
+        from tests.test_dicom import _write_series
+
+        def _make_zip(series_dir: Path) -> bytes:
+            buf = io.BytesIO()
+            with zipfile.ZipFile(buf, "w") as zf:
+                for path in series_dir.iterdir():
+                    zf.write(path, arcname=path.name)
+            return buf.getvalue()
+
+        # Small synthetic volume — FakePredictor ignores input shape/content
+        # and returns the fixture's two-lesion segmentation unchanged.
+        vol = np.zeros((16, 16, 8), dtype=np.int16)
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_root = Path(tmp)
+            zips: dict[str, bytes] = {}
+            for mod in MODALITIES:
+                series_dir = tmp_root / mod
+                _write_series(series_dir, vol)
+                zips[mod] = _make_zip(series_dir)
+
+        files = {mod: (f"{mod}.zip", blob, "application/zip") for mod, blob in zips.items()}
+        r = client.post("/predict/measure/dicom", files=files, data={"subject_id": "dcm_01"})
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert body["subject_id"] == "dcm_01"
+        assert body["recist"]["num_lesions"] == 2  # from two_lesion_seg fixture
+
+    def test_dicom_endpoint_rejects_bad_zip(self, client):
+        """A non-DICOM zip should surface as 400 with a load error."""
+        import io
+        import zipfile
+
+        def _garbage_zip() -> bytes:
+            buf = io.BytesIO()
+            with zipfile.ZipFile(buf, "w") as zf:
+                zf.writestr("not_a_dicom.txt", "hello world")
+            return buf.getvalue()
+
+        files = {
+            mod: (f"{mod}.zip", _garbage_zip(), "application/zip")
+            for mod in MODALITIES
+        }
+        r = client.post("/predict/measure/dicom", files=files)
+        assert r.status_code == 400
+        assert "No DICOM" in r.json()["detail"]
+
+
+class TestInferEmbedDim:
+    def test_detects_from_patch_embed(self):
+        from src.api.service import _infer_embed_dim
+
+        # OncoSeg patch_embed.proj is Conv3d(in=4, out=embed_dim, k=4)
+        sd = {"encoder.patch_embed.proj.weight": torch.zeros(24, 4, 4, 4, 4)}
+        assert _infer_embed_dim(sd) == 24
+
+    def test_returns_none_when_absent(self):
+        from src.api.service import _infer_embed_dim
+
+        assert _infer_embed_dim({}) is None

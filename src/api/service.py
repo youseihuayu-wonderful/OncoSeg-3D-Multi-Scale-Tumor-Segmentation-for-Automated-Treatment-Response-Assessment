@@ -91,12 +91,60 @@ class OncoSegService:
             )
         return segmentation, affine, pixdim
 
+    def segment_volumes(
+        self,
+        modality_volumes: dict[str, np.ndarray],
+        affine: np.ndarray,
+        pixdim: tuple[float, float, float],
+        subject_id: str = "subject",
+    ) -> tuple[np.ndarray, np.ndarray, tuple[float, float, float]]:
+        """Run inference on already-loaded 3D volumes (bypasses NIfTI parsing).
+
+        Used by the DICOM path: DICOM series are decoded to numpy volumes +
+        affine, wrapped as in-memory NIfTI bytes, and fed through the same
+        preprocessing transforms as the native NIfTI endpoints.
+        """
+        self._require_all_modalities(modality_volumes)
+        for mod, vol in modality_volumes.items():
+            if vol.ndim != 3:
+                raise ValueError(f"{mod} volume must be 3D, got shape {vol.shape}")
+
+        blobs: dict[str, bytes] = {}
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            for mod, vol in modality_volumes.items():
+                dest = tmp_path / f"{mod}.nii.gz"
+                nib.save(nib.Nifti1Image(vol.astype(np.float32), affine), dest)
+                blobs[mod] = dest.read_bytes()
+
+        return self.segment(blobs, subject_id=subject_id)
+
+    def measure_volumes(
+        self,
+        modality_volumes: dict[str, np.ndarray],
+        affine: np.ndarray,
+        pixdim: tuple[float, float, float],
+        subject_id: str = "subject",
+    ) -> dict:
+        segmentation, _, seg_pixdim = self.segment_volumes(
+            modality_volumes, affine, pixdim, subject_id=subject_id
+        )
+        return self._measure_from_segmentation(segmentation, seg_pixdim, subject_id)
+
     def measure(
         self,
         modality_bytes: dict[str, bytes],
         subject_id: str = "subject",
     ) -> dict:
         segmentation, _, pixdim = self.segment(modality_bytes, subject_id=subject_id)
+        return self._measure_from_segmentation(segmentation, pixdim, subject_id)
+
+    def _measure_from_segmentation(
+        self,
+        segmentation: np.ndarray,
+        pixdim: tuple[float, float, float],
+        subject_id: str,
+    ) -> dict:
 
         channel_stats = []
         for idx, name in enumerate(CHANNEL_NAMES):
@@ -170,6 +218,15 @@ class OncoSegService:
             raise ValueError(f"Missing required modalities: {missing}")
 
 
+def _infer_embed_dim(state_dict: dict) -> int | None:
+    """Recover embed_dim from the patch_embed weight shape of an OncoSeg checkpoint."""
+    key = "encoder.patch_embed.proj.weight"
+    w = state_dict.get(key)
+    if w is None:
+        return None
+    return int(w.shape[0])
+
+
 def build_predictor_from_checkpoint(
     checkpoint_path: Path,
     device: torch.device,
@@ -177,6 +234,7 @@ def build_predictor_from_checkpoint(
     sw_batch_size: int = 2,
     mc_samples: int = 0,
     model_source: str = "train_all",
+    embed_dim: int | None = None,
 ) -> tuple[Predictor, str]:
     """Build a Predictor around a checkpoint produced by train_all.py or src.models.
 
@@ -184,14 +242,23 @@ def build_predictor_from_checkpoint(
         - "train_all": checkpoint produced by train_all.OncoSeg (inline class).
           Matches the local_results/oncoseg_best.pth layout.
         - "src": checkpoint matching src.models.oncoseg.OncoSeg.
+
+    `embed_dim`: if None, inferred from the checkpoint's patch_embed shape.
+        Local M1 training used embed_dim=24 for memory; Colab/Kaggle runs use 48.
     """
+    state = torch.load(checkpoint_path, map_location=device, weights_only=True)
+    state_dict = state.get("model_state_dict", state)
+
+    if embed_dim is None:
+        embed_dim = _infer_embed_dim(state_dict) or 48
+
     if model_source == "train_all":
         # Deferred import: train_all pulls heavy deps (matplotlib, MONAI transforms)
         # that we only want to load when serving a train_all-style checkpoint.
         from train_all import OncoSeg as InlineOncoSeg
 
         model = InlineOncoSeg(
-            in_channels=4, num_classes=3, embed_dim=48,
+            in_channels=4, num_classes=3, embed_dim=embed_dim,
             depths=(2, 2, 2, 2), num_heads=(3, 6, 12, 24),
             dropout_rate=0.1, deep_supervision=False, use_cross_attention=True,
         )
@@ -199,15 +266,13 @@ def build_predictor_from_checkpoint(
         from src.models.oncoseg import OncoSeg
 
         model = OncoSeg(
-            in_channels=4, num_classes=3, embed_dim=48,
+            in_channels=4, num_classes=3, embed_dim=embed_dim,
             depths=(2, 2, 2, 2), num_heads=(3, 6, 12, 24),
             deep_supervision=False,
         )
     else:
         raise ValueError(f"Unknown model_source: {model_source!r}")
 
-    state = torch.load(checkpoint_path, map_location=device, weights_only=True)
-    state_dict = state.get("model_state_dict", state)
     model.load_state_dict(state_dict, strict=False)
 
     predictor = Predictor(
@@ -217,4 +282,4 @@ def build_predictor_from_checkpoint(
         sw_batch_size=sw_batch_size,
         mc_samples=mc_samples,
     )
-    return predictor, f"OncoSeg({model_source})"
+    return predictor, f"OncoSeg({model_source},embed_dim={embed_dim})"

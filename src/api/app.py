@@ -9,6 +9,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated
 
+import numpy as np
 import torch
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, status
 from fastapi.responses import FileResponse
@@ -29,6 +30,7 @@ from src.api.service import (
     ServiceMeta,
     build_predictor_from_checkpoint,
 )
+from src.data.dicom import DICOMLoadError, load_dicom_zip
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +70,8 @@ def _maybe_build_service_from_env() -> OncoSegService | None:
     model_source = os.environ.get("ONCOSEG_MODEL_SOURCE", "train_all")
     sw_batch_size = int(os.environ.get("ONCOSEG_SW_BATCH_SIZE", "2"))
     mc_samples = int(os.environ.get("ONCOSEG_MC_SAMPLES", "0"))
+    embed_dim_env = os.environ.get("ONCOSEG_EMBED_DIM")
+    embed_dim = int(embed_dim_env) if embed_dim_env else None
 
     device = _select_device()
     predictor, name = build_predictor_from_checkpoint(
@@ -77,6 +81,7 @@ def _maybe_build_service_from_env() -> OncoSegService | None:
         sw_batch_size=sw_batch_size,
         mc_samples=mc_samples,
         model_source=model_source,
+        embed_dim=embed_dim,
     )
 
     meta = ServiceMeta(
@@ -255,6 +260,66 @@ def create_app(service: OncoSegService | None = None) -> FastAPI:
             path=str(out_path),
             media_type="application/gzip",
             filename=out_path.name,
+        )
+
+    async def _load_dicom_uploads(
+        files: dict[str, UploadFile],
+    ) -> tuple[dict[str, np.ndarray], np.ndarray, tuple[float, float, float]]:
+        blobs = await _collect_modalities(files)
+        volumes: dict[str, np.ndarray] = {}
+        affine: np.ndarray | None = None
+        pixdim: tuple[float, float, float] | None = None
+
+        with tempfile.TemporaryDirectory(prefix="oncoseg_dicom_") as tmp:
+            tmp_root = Path(tmp)
+            for mod, blob in blobs.items():
+                mod_dir = tmp_root / mod
+                mod_dir.mkdir()
+                try:
+                    vol, aff, pd = load_dicom_zip(blob, mod_dir)
+                except DICOMLoadError as exc:
+                    raise HTTPException(
+                        status_code=400, detail=f"{mod}: {exc}"
+                    ) from exc
+                volumes[mod] = vol
+                if affine is None:
+                    affine = aff
+                    pixdim = pd
+        assert affine is not None and pixdim is not None
+        return volumes, affine, pixdim
+
+    @app.post(
+        "/predict/measure/dicom",
+        response_model=MeasureResponse,
+        tags=["predict"],
+        summary="DICOM series (zipped, one per modality) → RECIST JSON",
+    )
+    async def predict_measure_dicom(
+        svc: ServiceDep,
+        t1n: Annotated[UploadFile, File(description="T1-native DICOM series (zip)")],
+        t1c: Annotated[UploadFile, File(description="T1-contrast DICOM series (zip)")],
+        t2w: Annotated[UploadFile, File(description="T2-weighted DICOM series (zip)")],
+        t2f: Annotated[UploadFile, File(description="T2-FLAIR DICOM series (zip)")],
+        subject_id: Annotated[str, Form()] = "subject",
+    ) -> MeasureResponse:
+        volumes, affine, pixdim = await _load_dicom_uploads(
+            {"t1n": t1n, "t1c": t1c, "t2w": t2w, "t2f": t2f}
+        )
+        try:
+            result = svc.measure_volumes(volumes, affine, pixdim, subject_id=subject_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return MeasureResponse(
+            subject_id=result["subject_id"],
+            shape=result["shape"],
+            pixdim=result["pixdim"],
+            channel_stats=[ChannelStats(**cs) for cs in result["channel_stats"]],
+            recist=RECISTReport(
+                num_lesions=result["recist"]["num_lesions"],
+                sum_longest_diameter_mm=result["recist"]["sum_longest_diameter_mm"],
+                total_volume_mm3=result["recist"]["total_volume_mm3"],
+                lesions=[LesionMeasurement(**les) for les in result["recist"]["lesions"]],
+            ),
         )
 
     @app.post(

@@ -290,6 +290,7 @@ A FastAPI service wraps the trained model so predictions can be served over HTTP
 | `POST` | `/predict/segment` | Upload 4 NIfTI modalities → segmentation NIfTI file |
 | `POST` | `/predict/measure` | Upload 4 NIfTI modalities → JSON with per-channel stats + RECIST lesions |
 | `POST` | `/predict/response` | Upload 4 baseline + 4 follow-up NIfTIs → CR/PR/SD/PD classification |
+| `POST` | `/predict/measure/dicom` | Upload 4 DICOM-series zips (one per modality) → RECIST JSON |
 
 ### Run locally
 
@@ -329,10 +330,24 @@ curl -X POST http://localhost:8000/predict/measure \
   -F "subject_id=patient_001"
 ```
 
+### DICOM input
+
+Real clinical MRI/CT arrives as DICOM series, not NIfTI. The `/predict/measure/dicom` endpoint accepts one zip per modality, decodes each DICOM series to a 3D volume with the correct affine (incl. RescaleSlope/Intercept for CT), and routes through the same inference pipeline as the NIfTI endpoints — no dcm2niix or external binaries required.
+
+```bash
+# Build a zip per modality
+cd patient_dcm && for m in t1n t1c t2w t2f; do zip -r ${m}.zip ${m}_series/; done
+
+curl -X POST http://localhost:8000/predict/measure/dicom \
+  -F "t1n=@t1n.zip" -F "t1c=@t1c.zip" -F "t2w=@t2w.zip" -F "t2f=@t2f.zip" \
+  -F "subject_id=patient_001"
+```
+
 ### Notes
 
 - Checkpoints saved by `train_all.py` use the inline `OncoSeg` class, so the service defaults to `--model-source train_all`. Use `--model-source src` for checkpoints trained via `src.models.oncoseg.OncoSeg`.
-- The service is tested end-to-end with a deterministic fake predictor (`tests/test_api.py`, 12 tests) so CI doesn't need a GPU or checkpoint.
+- `embed_dim` is auto-detected from the checkpoint's `patch_embed` weight shape — the local M1 checkpoint uses 24, Colab/Kaggle runs use 48. Override with `--embed-dim N` if needed.
+- The service is tested end-to-end with a deterministic fake predictor (`tests/test_api.py`, 16 tests) so CI doesn't need a GPU or checkpoint. DICOM loader coverage in `tests/test_dicom.py` (9 tests) synthesizes minimal series with pydicom.
 
 ## Project Structure
 

@@ -29,6 +29,12 @@ def main() -> None:
     )
     parser.add_argument("--sw-batch-size", type=int, default=2)
     parser.add_argument("--mc-samples", type=int, default=0)
+    parser.add_argument(
+        "--embed-dim",
+        type=int,
+        default=None,
+        help="Override embed_dim (otherwise auto-detected from checkpoint)",
+    )
     parser.add_argument("--workers", type=int, default=1)
     parser.add_argument("--reload", action="store_true")
     args = parser.parse_args()
@@ -39,6 +45,8 @@ def main() -> None:
     os.environ["ONCOSEG_ROI_SIZE"] = args.roi_size
     os.environ["ONCOSEG_SW_BATCH_SIZE"] = str(args.sw_batch_size)
     os.environ["ONCOSEG_MC_SAMPLES"] = str(args.mc_samples)
+    if args.embed_dim is not None:
+        os.environ["ONCOSEG_EMBED_DIM"] = str(args.embed_dim)
 
     try:
         import uvicorn
