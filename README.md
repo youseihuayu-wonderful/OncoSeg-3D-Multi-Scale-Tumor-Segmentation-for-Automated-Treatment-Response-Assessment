@@ -10,6 +10,18 @@
 
 ---
 
+## Summary
+
+When treating cancer, doctors decide whether a treatment is working by **measuring the patient's tumor on CT/MRI scans over time**. Today that's done manually — slow (15–30 min per scan), subjective (two radiologists disagree by 20–40% on the tumor edge), and traditionally limited to a single 2D diameter.
+
+**OncoSeg automates this end-to-end:** it segments the tumor in 3D, produces an **uncertainty map** that flags where the model is unsure, and automatically reports the standard treatment-response category (shrinking / stable / growing, per RECIST 1.1).
+
+Unlike heavier deep-learning models, OncoSeg **matches the accuracy of a standard 3D U-Net while using 5× fewer parameters** (3.7M vs 19.2M) and produces **27% more accurate tumor boundaries** (HD95 15.4 mm vs 21.0 mm), tested on 96 brain-MRI cases from the Medical Segmentation Decathlon.
+
+**Next steps:** extend beyond brain to multi-organ tumors, and integrate into hospital imaging systems (PACS) so it runs inside real radiology workflows.
+
+---
+
 ## Abstract
 
 Manual tumor measurement in oncology clinical trials is slow, subjective, and limited to 2D RECIST criteria. Radiologists spend 15-30 minutes per patient per timepoint, with 20-40% inter-reader variability on tumor boundaries.
