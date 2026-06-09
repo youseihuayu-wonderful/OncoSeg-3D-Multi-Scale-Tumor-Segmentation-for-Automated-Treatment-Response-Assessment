@@ -1,0 +1,19 @@
+# OncoSeg L3 — simulated PACS (Orthanc) with the DICOMweb plugin enabled.
+# Bring up:   cd deploy/orthanc && docker compose up -d
+# Web UI:     http://localhost:8042   (no login — dev config)
+# DICOMweb:   http://localhost:8042/dicom-web/
+# DICOM port: localhost:4242 (AET ORTHANC) for C-STORE
+services:
+  orthanc:
+    image: orthancteam/orthanc:latest   # pin a version (e.g. :25.x) for reproducibility
+    container_name: oncoseg-orthanc
+    ports:
+      - "8042:8042"   # HTTP: REST API + web UI + DICOMweb
+      - "4242:4242"   # classic DICOM (C-STORE / C-FIND)
+    volumes:
+      - ./orthanc.json:/etc/orthanc/orthanc.json:ro
+      - orthanc-storage:/var/lib/orthanc/db
+    restart: unless-stopped
+
+volumes:
+  orthanc-storage:

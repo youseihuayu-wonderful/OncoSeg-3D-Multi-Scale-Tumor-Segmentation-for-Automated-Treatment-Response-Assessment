@@ -1,0 +1,24 @@
+{
+  "Name": "OncoSeg-PACS",
+
+  "// HTTP": "REST API + built-in web UI + DICOMweb are all served on this port",
+  "HttpPort": 8042,
+  "RemoteAccessAllowed": true,
+
+  "// DICOM": "Classic DICOM listener (C-STORE / C-FIND) for traditional PACS traffic",
+  "DicomServerEnabled": true,
+  "DicomAet": "ORTHANC",
+  "DicomPort": 4242,
+
+  "// DICOMweb": "Modern REST flavour of DICOM (QIDO-RS / WADO-RS / STOW-RS) at /dicom-web/",
+  "DicomWeb": {
+    "Enable": true,
+    "Root": "/dicom-web/",
+    "EnableWado": true,
+    "WadoRoot": "/wado"
+  },
+
+  "// Auth": "DEV ONLY — no auth so the local OncoSeg service can talk to it freely.",
+  "// Auth ": "Do NOT use this config as-is anywhere a real network can reach it.",
+  "AuthenticationEnabled": false
+}
