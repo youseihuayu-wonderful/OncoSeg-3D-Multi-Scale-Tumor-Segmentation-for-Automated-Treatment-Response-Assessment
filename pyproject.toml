@@ -64,13 +64,18 @@ dev = [
     "mypy>=1.7.0",
     "pre-commit>=3.6.0",
     "httpx>=0.27.0",
+    "oncoseg[dicom]",
 ]
 serve = [
     "fastapi>=0.110.0",
     "uvicorn[standard]>=0.29.0",
     "python-multipart>=0.0.9",
 ]
-all = ["oncoseg[dev,serve]"]
+dicom = [
+    # DICOM SEG/SR interoperability for PACS integration (src/dicom/)
+    "highdicom>=0.22.0",
+]
+all = ["oncoseg[dev,serve,dicom]"]
 
 [project.scripts]
 oncoseg-train = "src.training.trainer:main"
