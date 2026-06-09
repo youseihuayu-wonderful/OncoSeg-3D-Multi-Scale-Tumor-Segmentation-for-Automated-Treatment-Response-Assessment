@@ -75,22 +75,26 @@ def _service_with_seg(seg: np.ndarray, model_source: str = "fake") -> tuple[Onco
 
 @pytest.fixture
 def two_lesion_seg():
-    """3-channel seg [TC, WT, ET] with two ET lesions for deterministic RECIST."""
+    """3-channel seg [TC, WT, ET] with two ET lesions for deterministic RECIST.
+
+    Lesion sizes are chosen so each longest axial diameter clears the
+    RECIST 1.1 §3.1.1 10mm target-lesion threshold at 1mm spacing.
+    """
     # The test NIfTI uploads are 32^3, but the inference pipeline resamples to
     # a 1mm pixdim (no-op for 1mm inputs) -> the predict_volume input spatial
     # dims equal the post-transform input. Our FakePredictor ignores the input
     # and returns this fixed segmentation, so its shape defines the output shape.
     seg = np.zeros((3, 32, 32, 32), dtype=np.uint8)
-    # ET lesion 1: 4x4x4 cube
-    seg[2, 4:8, 4:8, 4:8] = 1
-    # ET lesion 2: 2x2x2 cube, disjoint
-    seg[2, 20:22, 20:22, 20:22] = 1
-    # WT contains ET ∪ TC expansion
+    # ET lesion 1: 12x12x12 cube -> longest axial diameter 11*sqrt(2) ≈ 15.56mm
+    seg[2, 4:16, 4:16, 4:16] = 1
+    # ET lesion 2: 9x9x9 cube, disjoint -> longest axial diameter 8*sqrt(2) ≈ 11.31mm
+    seg[2, 20:29, 20:29, 20:29] = 1
+    # WT contains ET ∪ a slightly larger envelope around lesion 1
     seg[1] = seg[2].copy()
-    seg[1, 4:12, 4:12, 4:12] = 1  # bigger WT around lesion 1
-    # TC = slightly tighter than WT
-    seg[0, 4:10, 4:10, 4:10] = 1
-    seg[0, 20:22, 20:22, 20:22] = 1
+    seg[1, 2:18, 2:18, 2:18] = 1
+    # TC: includes both lesions, tighter than WT around lesion 1
+    seg[0, 4:16, 4:16, 4:16] = 1
+    seg[0, 20:29, 20:29, 20:29] = 1
     return seg
 
 

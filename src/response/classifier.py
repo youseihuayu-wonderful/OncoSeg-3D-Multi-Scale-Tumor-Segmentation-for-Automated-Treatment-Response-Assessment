@@ -44,6 +44,7 @@ class ResponseClassifier:
         baseline_mask: np.ndarray,
         followup_mask: np.ndarray,
         pixdim: tuple[float, float, float] = (1.0, 1.0, 1.0),
+        history_sums: list[float] | None = None,
     ) -> ResponseResult:
         """Classify treatment response per RECIST 1.1.
 
@@ -51,6 +52,10 @@ class ResponseClassifier:
             baseline_mask: Binary 3D mask from baseline scan
             followup_mask: Binary 3D mask from follow-up scan
             pixdim: Voxel spacing in mm
+            history_sums: Optional list of prior follow-up sums of longest diameters
+                (mm). When provided, the nadir (smallest of baseline + history) is
+                used as the reference for PD per RECIST 1.1 §4.3. PR/SD/CR continue
+                to compare against baseline.
 
         Returns:
             ResponseResult with category and measurements.
@@ -64,23 +69,42 @@ class ResponseClassifier:
         baseline_vol = sum(les["volume_mm3"] for les in baseline_lesions)
         followup_vol = sum(les["volume_mm3"] for les in followup_lesions)
 
-        # Percent change in sum of longest diameters
+        # Percent change in sum of longest diameters (vs baseline, for PR/SD/CR)
         if baseline_sum_ld > 0:
             pct_change = (followup_sum_ld - baseline_sum_ld) / baseline_sum_ld
         else:
             pct_change = 0.0 if followup_sum_ld == 0 else float("inf")
+
+        # Nadir reference for PD (RECIST 1.1 §4.3): smallest SoD since treatment
+        # start, including baseline.
+        if history_sums:
+            nadir_sum_ld = min(baseline_sum_ld, *history_sums)
+        else:
+            nadir_sum_ld = baseline_sum_ld
+
+        if nadir_sum_ld > 0:
+            pd_pct_change = (followup_sum_ld - nadir_sum_ld) / nadir_sum_ld
+        else:
+            pd_pct_change = 0.0 if followup_sum_ld == 0 else float("inf")
+        pd_abs_increase = followup_sum_ld - nadir_sum_ld
 
         vol_change = (followup_vol - baseline_vol) / baseline_vol if baseline_vol > 0 else 0.0
 
         # Check for new lesions (more lesions in follow-up)
         new_lesions = len(followup_lesions) > len(baseline_lesions)
 
-        # RECIST 1.1 classification
+        # RECIST 1.1 classification.
+        # PD requires BOTH >=20% relative AND >=5mm absolute increase vs nadir
+        # (§4.3), or appearance of new lesion(s).
+        pd_by_growth = (
+            pd_pct_change >= RECISTMeasurer.PD_THRESHOLD
+            and pd_abs_increase >= RECISTMeasurer.PD_ABSOLUTE_INCREASE_MM
+        )
         if followup_sum_ld == 0 and len(followup_lesions) == 0:
             category = ResponseCategory.CR
         elif pct_change <= RECISTMeasurer.PR_THRESHOLD:
             category = ResponseCategory.PR
-        elif pct_change >= RECISTMeasurer.PD_THRESHOLD or new_lesions:
+        elif pd_by_growth or new_lesions:
             category = ResponseCategory.PD
         else:
             category = ResponseCategory.SD

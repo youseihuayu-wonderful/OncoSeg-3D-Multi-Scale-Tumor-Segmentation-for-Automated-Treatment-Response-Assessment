@@ -17,6 +17,11 @@ class RECISTMeasurer:
     CR_THRESHOLD = 0.0  # Complete disappearance
     PR_THRESHOLD = -0.30  # 30% decrease
     PD_THRESHOLD = 0.20  # 20% increase
+    PD_ABSOLUTE_INCREASE_MM = 5.0  # Minimum absolute increase for PD (RECIST 1.1 §4.3)
+
+    # Target lesion eligibility (RECIST 1.1 §3.1.1, §3.1.2)
+    MIN_TARGET_DIAMETER_MM = 10.0  # Minimum longest diameter to qualify as target lesion
+    MAX_TARGET_LESIONS = 5  # Maximum total target lesions (whole-body cap)
 
     def longest_axial_diameter(
         self, mask: np.ndarray, pixdim: tuple[float, float, float] = (1.0, 1.0, 1.0)
@@ -94,5 +99,12 @@ class RECISTMeasurer:
                 }
             )
 
-        lesions.sort(key=lambda x: x["volume_mm3"], reverse=True)
+        # RECIST 1.1 §3.1.1: drop sub-threshold lesions (longest diameter < 10 mm)
+        lesions = [
+            les for les in lesions if les["longest_diameter_mm"] >= self.MIN_TARGET_DIAMETER_MM
+        ]
+
+        # RECIST 1.1 §3.1.2: keep at most MAX_TARGET_LESIONS, ranked by longest diameter
+        lesions.sort(key=lambda x: x["longest_diameter_mm"], reverse=True)
+        lesions = lesions[: self.MAX_TARGET_LESIONS]
         return lesions
