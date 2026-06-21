@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>OncoSeg · 3D Architecture</title>
+<style>
+  :root{
+    --indigo:#6366f1; --violet:#a855f7; --teal:#14b8a6; --emerald:#10b981;
+    --amber:#f59e0b; --rose:#f43f5e; --slate:#64748b; --ink:#0b1020;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:#05060d;color:#e6e9f2}
+  #app{position:fixed;inset:0}
+  canvas{display:block}
+
+  /* glass panels */
+  .glass{
+    background:rgba(18,22,40,.55);
+    border:1px solid rgba(255,255,255,.10);
+    backdrop-filter:blur(14px) saturate(140%);
+    -webkit-backdrop-filter:blur(14px) saturate(140%);
+    border-radius:18px;
+    box-shadow:0 18px 50px -20px rgba(0,0,0,.8);
+  }
+
+  #title{position:absolute;top:22px;left:24px;padding:18px 22px;max-width:380px}
+  #title .tag{display:inline-block;font-size:10.5px;font-weight:800;letter-spacing:.14em;
+    color:#c7d2fe;background:rgba(99,102,241,.18);border:1px solid rgba(99,102,241,.45);
+    padding:4px 10px;border-radius:999px;margin-bottom:12px}
+  #title h1{font-size:34px;font-weight:800;letter-spacing:-.02em;
+    background:linear-gradient(100deg,#a5b4fc,#e9d5ff 45%,#5eead4);
+    -webkit-background-clip:text;background-clip:text;color:transparent;line-height:1.05}
+  #title p{margin-top:8px;font-size:13px;color:#aab2cc;line-height:1.5}
+  #title .flow{margin-top:12px;font-size:12px;color:#cdd4ea}
+  #title .flow b{color:#fff}
+
+  #stats{position:absolute;top:22px;right:24px;display:grid;grid-template-columns:1fr 1fr;gap:12px;width:300px}
+  .stat{padding:14px 16px}
+  .stat .v{font-size:26px;font-weight:800;letter-spacing:-.02em}
+  .stat .k{font-size:11px;font-weight:700;color:#dfe3f0;margin-top:2px}
+  .stat .s{font-size:10px;color:#9aa3bd;margin-top:3px}
+
+  #legend{position:absolute;bottom:22px;left:24px;padding:14px 18px;display:flex;flex-direction:column;gap:9px}
+  #legend .row{display:flex;align-items:center;gap:10px;font-size:12px;color:#cdd4ea}
+  #legend .dot{width:13px;height:13px;border-radius:5px;box-shadow:0 0 10px currentColor}
+
+  #controls{position:absolute;bottom:22px;right:24px;display:flex;gap:10px;align-items:center}
+  .btn{cursor:pointer;font-size:12px;font-weight:600;color:#dfe3f0;padding:10px 14px;border-radius:12px;
+    background:rgba(28,33,56,.6);border:1px solid rgba(255,255,255,.12);user-select:none;transition:.15s}
+  .btn:hover{background:rgba(60,70,110,.7);border-color:rgba(255,255,255,.25)}
+  .btn.active{background:linear-gradient(100deg,#4f46e5,#7c3aed);border-color:transparent;color:#fff}
+  .hint{font-size:11px;color:#7c87a6;margin-right:6px}
+
+  /* 3D labels */
+  .label{font-size:11px;font-weight:700;color:#eef1fb;letter-spacing:.01em;
+    text-shadow:0 1px 6px rgba(0,0,0,.9);white-space:nowrap;pointer-events:none;transform:translateY(-2px)}
+  .label .sub{display:block;font-size:9px;font-weight:600;color:#aeb6d4;letter-spacing:.02em}
+
+  /* hover tooltip */
+  #tip{position:absolute;pointer-events:none;opacity:0;transition:opacity .12s;max-width:260px;
+    padding:12px 14px;z-index:20}
+  #tip h3{font-size:13px;font-weight:800;margin-bottom:3px}
+  #tip .meta{font-size:10.5px;color:#9aa3bd;margin-bottom:6px;font-weight:600}
+  #tip p{font-size:11px;color:#cdd4ea;line-height:1.45}
+
+  #loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-size:13px;color:#7c87a6;background:#05060d}
+  @media (max-width:760px){#stats,#title{display:none}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="loading">loading 3D scene…</div>
+
+<div id="title" class="glass">
+  <span class="tag">HYBRID 3D TUMOR SEGMENTATION</span>
+  <h1>OncoSeg</h1>
+  <p>Swin-Transformer encoder × CNN decoder, joined by cross-attention skips.</p>
+  <div class="flow">› <b>Transformer</b> sees globally &nbsp;·&nbsp; <b>CNN</b> rebuilds locally &nbsp;·&nbsp; <b>cross-attention</b> bridges them</div>
+</div>
+
+<div id="stats">
+  <div class="stat glass"><div class="v" style="color:#a5b4fc">0.797</div><div class="k">Best Dice</div><div class="s">MSD Brain · 50 ep</div></div>
+  <div class="stat glass"><div class="v" style="color:#5eead4">5×</div><div class="k">Fewer params</div><div class="s">beats UNet3D</div></div>
+  <div class="stat glass"><div class="v" style="color:#fcd34d">0.010</div><div class="k">ECE</div><div class="s">MC-Dropout</div></div>
+  <div class="stat glass"><div class="v" style="color:#fda4af">0.85</div><div class="k">Whole-tumor</div><div class="s">TC .79 · ET .75</div></div>
+</div>
+
+<div id="legend" class="glass">
+  <div class="row"><span class="dot" style="background:#6366f1;color:#6366f1"></span>Swin Transformer encoder (global, ↓)</div>
+  <div class="row"><span class="dot" style="background:#14b8a6;color:#14b8a6"></span>CNN decoder (local detail, ↑)</div>
+  <div class="row"><span class="dot" style="background:#f59e0b;color:#f59e0b"></span>Cross-attention skip</div>
+  <div class="row"><span class="dot" style="background:#a855f7;color:#a855f7"></span>Bottleneck</div>
+  <div class="row"><span class="dot" style="background:#f43f5e;color:#f43f5e"></span>Output / RECIST head</div>
+</div>
+
+<div id="controls">
+  <span class="hint">drag · scroll · hover</span>
+  <div class="btn active" id="btnRotate">Auto-rotate</div>
+  <div class="btn" id="btnFlow">Flow</div>
+  <div class="btn" id="btnReset">Reset</div>
+</div>
+
+<div id="tip" class="glass"></div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+const COL = {
+  enc:0x6366f1, enc2:0x818cf8, bottleneck:0xa855f7, dec:0x14b8a6, dec2:0x2dd4bf,
+  amber:0xf59e0b, rose:0xf43f5e, slate:0x64748b
+};
+
+// ---- block definitions (mirror src/models/oncoseg.py) ----------------------
+const BLOCKS = [
+  {id:'in', kind:'io', label:'Input', sub:'4-modal MRI', pos:[-5.4,7.6,0], size:[2.5,1.0,0.5], color:COL.slate,
+    role:'T1, T1c, T2, FLAIR volumes stacked as 4 input channels — [B, 4, H, W, D].'},
+  {id:'s1', kind:'enc', label:'Swin Stage 1', sub:'48 ch · H/4', pos:[-5.4,4.6,0], size:[2.8,2.8,0.55], color:COL.enc,
+    role:'Patch-embed (4×4×4) + shifted-window self-attention. Largest spatial map, shallow channels.'},
+  {id:'s2', kind:'enc', label:'Swin Stage 2', sub:'96 ch · H/8', pos:[-5.4,1.7,0], size:[2.3,2.3,0.95], color:COL.enc,
+    role:'Patch-merge ↓2, depth-2 window attention. Spatial halves, channels double.'},
+  {id:'s3', kind:'enc', label:'Swin Stage 3', sub:'192 ch · H/16', pos:[-5.4,-1.2,0], size:[1.8,1.8,1.4], color:COL.enc,
+    role:'Deepest attention block (depth 6, 12 heads). Rich semantic context.'},
+  {id:'s4', kind:'bottleneck', label:'Swin Stage 4', sub:'384 ch · H/32', pos:[-5.4,-4.4,0], size:[1.35,1.35,2.0], color:COL.bottleneck,
+    role:'Bottleneck — most abstract global features (24 heads). Optional temporal attention fuses baseline↔follow-up here.'},
+  {id:'d1', kind:'dec', label:'Decoder Block 1', sub:'192 ch · ↑2', pos:[5.4,-1.2,0], size:[1.8,1.8,1.4], color:COL.dec,
+    role:'ConvTranspose3d ↑2 + cross-attention skip + 2× (Conv3d·InstanceNorm·LeakyReLU).'},
+  {id:'d2', kind:'dec', label:'Decoder Block 2', sub:'96 ch · ↑2', pos:[5.4,1.7,0], size:[2.3,2.3,0.95], color:COL.dec,
+    role:'Upsample, fuse Swin Stage 2 features via cross-attention, refine.'},
+  {id:'d3', kind:'dec', label:'Decoder Block 3', sub:'48 ch · ↑2', pos:[5.4,4.6,0], size:[2.8,2.8,0.55], color:COL.dec,
+    role:'Final decoder stage. Upsample head then recovers the 4× patch-embed downsampling.'},
+  {id:'out', kind:'head', label:'Segmentation', sub:'TC · WT · ET', pos:[5.4,7.6,0], size:[2.5,1.0,0.5], color:COL.rose,
+    role:'1×1×1 conv → 3 sigmoid channels. Feeds RECIST measurement and CR/PR/SD/PD response.'},
+];
+const byId = Object.fromEntries(BLOCKS.map(b=>[b.id,b]));
+const P = id => new THREE.Vector3(...byId[id].pos);
+
+// ---- renderer / scene ------------------------------------------------------
+const app = document.getElementById('app');
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.15;
+app.appendChild(renderer.domElement);
+
+const labelRenderer = new CSS2DRenderer();
+labelRenderer.setSize(innerWidth, innerHeight);
+labelRenderer.domElement.style.position = 'absolute';
+labelRenderer.domElement.style.top = '0';
+labelRenderer.domElement.style.pointerEvents = 'none';
+app.appendChild(labelRenderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x05060d);
+scene.fog = new THREE.FogExp2(0x05060d, 0.018);
+
+const camera = new THREE.PerspectiveCamera(48, innerWidth/innerHeight, 0.1, 200);
+const CAM0 = new THREE.Vector3(13, 6.5, 20);
+camera.position.copy(CAM0);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.07;
+controls.minDistance = 12;
+controls.maxDistance = 48;
+controls.target.set(0, 0.5, 0);
+controls.autoRotate = true;
+controls.autoRotateSpeed = 0.7;
+
+// ---- lights ----------------------------------------------------------------
+scene.add(new THREE.AmbientLight(0x8090c0, 0.55));
+const key = new THREE.DirectionalLight(0xffffff, 1.5); key.position.set(8,14,12); scene.add(key);
+const rim = new THREE.DirectionalLight(0x7c5cff, 0.9); rim.position.set(-12,4,-8); scene.add(rim);
+scene.add(new THREE.PointLight(0x14b8a6, 80, 30).position.set(6,0,4));
+scene.add(new THREE.PointLight(0x6366f1, 80, 30).position.set(-6,0,4));
+
+// subtle ground grid
+const grid = new THREE.GridHelper(80, 60, 0x223, 0x131a2e);
+grid.position.y = -8.5; grid.material.transparent = true; grid.material.opacity = 0.35;
+scene.add(grid);
+
+// ---- build blocks ----------------------------------------------------------
+const meshes = [];
+const labelFor = (b)=>{
+  const d = document.createElement('div');
+  d.className='label';
+  d.innerHTML = `${b.label}<span class="sub">${b.sub}</span>`;
+  const o = new CSS2DObject(d);
+  o.position.set(0, b.size[1]/2 + 0.55, 0);
+  return o;
+};
+for (const b of BLOCKS){
+  const geo = new THREE.BoxGeometry(...b.size);
+  const mat = new THREE.MeshStandardMaterial({
+    color:b.color, metalness:0.35, roughness:0.32,
+    emissive:b.color, emissiveIntensity:0.35,
+    transparent:true, opacity:0.96
+  });
+  const m = new THREE.Mesh(geo, mat);
+  m.position.set(...b.pos);
+  m.userData = b;
+  m.userData.baseEmissive = 0.35;
+  // wireframe edge overlay for a crisp "feature volume" look
+  const edges = new THREE.LineSegments(
+    new THREE.EdgesGeometry(geo),
+    new THREE.LineBasicMaterial({color:0xffffff, transparent:true, opacity:0.18})
+  );
+  m.add(edges);
+  m.add(labelFor(b));
+  scene.add(m);
+  meshes.push(m);
+}
+
+// ---- connectors (tubes) ----------------------------------------------------
+function tube(curve, color, radius=0.07, op=0.85){
+  const g = new THREE.TubeGeometry(curve, 60, radius, 10, false);
+  const mat = new THREE.MeshStandardMaterial({color, emissive:color, emissiveIntensity:0.7,
+    metalness:0.2, roughness:0.4, transparent:true, opacity:op});
+  return new THREE.Mesh(g, mat);
+}
+function line3(a,b){ return new THREE.LineCurve3(P(a),P(b)); }
+function arc(a,b,bow){ // bow toward +z viewer
+  const pa=P(a), pb=P(b), mid=pa.clone().add(pb).multiplyScalar(0.5);
+  mid.z += bow;
+  return new THREE.QuadraticBezierCurve3(pa, mid, pb);
+}
+
+// encoder downsample path
+['in s1','s1 s2','s2 s3','s3 s4'].forEach(p=>{const[a,b]=p.split(' ');scene.add(tube(line3(a,b),COL.enc,0.06));});
+// decoder upsample path
+['d1 d2','d2 d3','d3 out'].forEach(p=>{const[a,b]=p.split(' ');scene.add(tube(line3(a,b),COL.dec,0.06));});
+// bottleneck bridge (dips through bottom centre)
+const bridge = new THREE.QuadraticBezierCurve3(P('s4'), new THREE.Vector3(0,-6.4,0), P('d1'));
+scene.add(tube(bridge, COL.bottleneck, 0.085));
+// cross-attention skips (amber arcs bowing toward camera)
+const SKIPS = [['s1','d3'],['s2','d2'],['s3','d1']];
+const skipCurves = SKIPS.map(([a,b])=>arc(a,b,3.2));
+skipCurves.forEach(c=>scene.add(tube(c, COL.amber, 0.05, 0.7)));
+
+// small cross-attn nodes mid-arc
+skipCurves.forEach(c=>{
+  const node = new THREE.Mesh(
+    new THREE.IcosahedronGeometry(0.34, 1),
+    new THREE.MeshStandardMaterial({color:COL.amber, emissive:COL.amber, emissiveIntensity:1.1, roughness:0.3})
+  );
+  node.position.copy(c.getPoint(0.5));
+  const d=document.createElement('div'); d.className='label';
+  d.innerHTML=`Cross-Attn<span class="sub">Q·decoder &nbsp;K,V·encoder</span>`;
+  const o=new CSS2DObject(d); o.position.set(0,0.6,0); node.add(o);
+  scene.add(node);
+});
+
+// ---- animated flow particles ----------------------------------------------
+const mainPath = new THREE.CatmullRomCurve3(
+  ['in','s1','s2','s3','s4'].map(P).concat([new THREE.Vector3(0,-6.4,0)]).concat(['d1','d2','d3','out'].map(P)),
+  false, 'catmullrom', 0.2
+);
+const flowGroup = new THREE.Group(); scene.add(flowGroup);
+const dots = [];
+const dotGeo = new THREE.SphereGeometry(0.13, 12, 12);
+for (let i=0;i<26;i++){
+  const m = new THREE.Mesh(dotGeo, new THREE.MeshBasicMaterial({color:0xbfe3ff}));
+  m.userData.t = i/26;
+  flowGroup.add(m); dots.push(m);
+}
+// skip-flow particles
+const skipDots = [];
+skipCurves.forEach((c,ci)=>{
+  for(let i=0;i<6;i++){
+    const m=new THREE.Mesh(new THREE.SphereGeometry(0.1,10,10),
+      new THREE.MeshBasicMaterial({color:0xffd591}));
+    m.userData={t:i/6,curve:c}; flowGroup.add(m); skipDots.push(m);
+  }
+});
+
+// ---- post-processing (bloom) ----------------------------------------------
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight), 0.65, 0.6, 0.12);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+
+// ---- hover interaction -----------------------------------------------------
+const ray = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+const tip = document.getElementById('tip');
+let hovered = null;
+addEventListener('pointermove', e=>{
+  mouse.x = (e.clientX/innerWidth)*2 - 1;
+  mouse.y = -(e.clientY/innerHeight)*2 + 1;
+  tip.style.left = Math.min(e.clientX+16, innerWidth-280) + 'px';
+  tip.style.top  = (e.clientY+16) + 'px';
+});
+function updateHover(){
+  ray.setFromCamera(mouse, camera);
+  const hit = ray.intersectObjects(meshes, false)[0];
+  const obj = hit ? hit.object : null;
+  if (obj !== hovered){
+    if (hovered){ hovered.material.emissiveIntensity = hovered.userData.baseEmissive; hovered.scale.setScalar(1); }
+    hovered = obj;
+    if (hovered){
+      hovered.material.emissiveIntensity = 0.95;
+      hovered.scale.setScalar(1.08);
+      const b = hovered.userData;
+      tip.innerHTML = `<h3>${b.label}</h3><div class="meta">${b.sub} &nbsp;·&nbsp; ${kindName(b.kind)}</div><p>${b.role}</p>`;
+      tip.style.opacity = 1;
+      document.body.style.cursor='pointer';
+    } else { tip.style.opacity = 0; document.body.style.cursor='default'; }
+  }
+}
+function kindName(k){return {enc:'Swin encoder',bottleneck:'Bottleneck',dec:'CNN decoder',io:'I/O',head:'Output head'}[k]||k;}
+
+// ---- UI buttons ------------------------------------------------------------
+const btnRotate=document.getElementById('btnRotate');
+const btnFlow=document.getElementById('btnFlow');
+const btnReset=document.getElementById('btnReset');
+let flowOn=true;
+btnFlow.classList.add('active');
+btnRotate.onclick=()=>{controls.autoRotate=!controls.autoRotate;btnRotate.classList.toggle('active',controls.autoRotate);};
+btnFlow.onclick=()=>{flowOn=!flowOn;flowGroup.visible=flowOn;btnFlow.classList.toggle('active',flowOn);};
+btnReset.onclick=()=>{controls.target.set(0,0.5,0);camera.position.copy(CAM0);};
+
+// ---- resize ----------------------------------------------------------------
+addEventListener('resize', ()=>{
+  camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  labelRenderer.setSize(innerWidth, innerHeight);
+  composer.setSize(innerWidth, innerHeight);
+});
+
+// ---- loop ------------------------------------------------------------------
+const clock = new THREE.Clock();
+document.getElementById('loading').remove();
+function animate(){
+  requestAnimationFrame(animate);
+  const dt = clock.getDelta();
+  controls.update();
+  // flow along main path
+  for (const m of dots){
+    m.userData.t = (m.userData.t + dt*0.045) % 1;
+    m.position.copy(mainPath.getPoint(m.userData.t));
+  }
+  for (const m of skipDots){
+    m.userData.t = (m.userData.t + dt*0.16) % 1;
+    m.position.copy(m.userData.curve.getPoint(m.userData.t));
+  }
+  // gentle pulse on bottleneck
+  const pulse = 0.55 + 0.35*Math.sin(clock.elapsedTime*2);
+  byId.s4 && (meshes.find(x=>x.userData.id==='s4').material.emissiveIntensity =
+    (hovered && hovered.userData.id==='s4') ? 0.95 : pulse);
+  updateHover();
+  composer.render();
+  labelRenderer.render(scene, camera);
+}
+animate();
+</script>
+</body>
+</html>

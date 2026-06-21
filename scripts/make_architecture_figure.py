@@ -16,6 +16,8 @@ matplotlib.use("Agg")
 import matplotlib.font_manager as fm  # noqa: E402
 import matplotlib.patheffects as pe  # noqa: E402
 import matplotlib.pyplot as plt  # noqa: E402
+import numpy as np  # noqa: E402
+from matplotlib.colors import LinearSegmentedColormap  # noqa: E402
 from matplotlib.lines import Line2D  # noqa: E402
 from matplotlib.patches import FancyArrowPatch, FancyBboxPatch  # noqa: E402
 
@@ -62,6 +64,55 @@ def arrow(ax, p0, p1, color=C_INK, lw=2.0, style="-|>", rad=0.0, z=3, ls="-"):
     )
     ax.add_patch(a)
     return a
+
+
+# ---- modern helpers (gradient bento cards, soft shadow) ----------------------
+SOFT = [pe.withSimplePatchShadow(offset=(3, -3), alpha=0.16, shadow_rgbFace="#1b2440")]
+
+
+def grad_fill(ax, x, y, w, h, c0, c1, diagonal=False, r=0.07, z=2, shadow=True,
+              ec="none", lw=0):
+    """Rounded card filled with a c0->c1 gradient, clipped to the rounded box."""
+    base = FancyBboxPatch(
+        (x, y), w, h, boxstyle=f"round,pad=0,rounding_size={r}",
+        linewidth=lw, edgecolor=ec, facecolor=c0, zorder=z,
+        path_effects=SOFT if shadow else None,
+    )
+    ax.add_patch(base)
+    g = np.linspace(0, 1, 256)
+    if diagonal:
+        gx, gy = np.meshgrid(g, g)
+        arr = (gx + gy) / 2.0
+    else:
+        arr = g.reshape(-1, 1)
+    cmap = LinearSegmentedColormap.from_list("g", [c0, c1])
+    im = ax.imshow(arr, extent=(x, x + w, y, y + h), origin="lower", cmap=cmap,
+                   aspect="auto", zorder=z + 0.05, interpolation="bilinear")
+    im.set_clip_path(base)
+    return base
+
+
+def card(ax, x, y, w, h, fc="white", ec="#E6EAF2", lw=1.2, r=0.07, z=2, shadow=True):
+    p = FancyBboxPatch(
+        (x, y), w, h, boxstyle=f"round,pad=0,rounding_size={r}",
+        linewidth=lw, edgecolor=ec, facecolor=fc, zorder=z,
+        path_effects=SOFT if shadow else None,
+    )
+    ax.add_patch(p)
+    return p
+
+
+def pill(ax, x, y, w, h, c0, c1, label, tc="white", fs=8.8, r=0.5):
+    grad_fill(ax, x, y, w, h, c0, c1, r=r, shadow=False, z=2)
+    txt(ax, x + w / 2, y + h / 2, label, size=fs, weight="bold", color=tc, z=4)
+
+
+def chip(ax, x, y, label, color, fs=8.2):
+    """Small uppercase tag chip."""
+    w = 0.22 + 0.092 * len(label)
+    grad_fill(ax, x, y, w, 0.42, color, color, r=0.21, shadow=False, z=4)
+    txt(ax, x + w / 2, y + 0.21, label, size=fs, weight="bold", color="white", z=5)
+    return w
 
 
 # ============================================================================
@@ -236,104 +287,116 @@ def architecture():
 # FIGURE 2 — design-rationale infographic
 # ============================================================================
 def infographic():
-    fig, ax = plt.subplots(figsize=(15, 9), dpi=150)
-    fig.patch.set_facecolor(C_BG)
-    ax.set_xlim(0, 15)
+    # modern bento-grid layout, 16:9, gradient cards, soft shadows
+    G_IND = ("#4F46E5", "#7C3AED")   # indigo  -> violet   (Swin / encoder)
+    G_TEAL = ("#0D9488", "#10B981")  # teal    -> emerald  (CNN / decoder)
+    G_AMBER = ("#F59E0B", "#F97316") # amber   -> orange   (cross-attn)
+    G_ROSE = ("#E11D48", "#FB7185")  # rose                (outcomes)
+    G_PURP = ("#7C3AED", "#A855F7")  # violet              (RECIST)
+    G_SLATE = ("#475569", "#64748B") # slate               (input)
+    INK = "#0F172A"
+    MUTE = "#64748B"
+
+    fig, ax = plt.subplots(figsize=(16, 9), dpi=150)
+    ax.set_xlim(0, 16)
     ax.set_ylim(0, 9)
     ax.axis("off")
 
-    # header band
-    rbox(ax, 0.0, 8.05, 15, 0.95, C_INK, ec=C_INK, lw=0, r=0.01, shadow=False)
-    txt(ax, 0.5, 8.66, "OncoSeg — Why Swin Encoder + CNN Decoder?", size=22,
-        weight="bold", color="white", ha="left")
-    txt(ax, 0.52, 8.27, "Transformer sees globally  •  CNN reconstructs locally  •  cross-attention bridges the two",
-        size=11.5, color="#aebbd6", ha="left")
+    # soft page-background gradient
+    bg = np.linspace(0, 1, 256).reshape(-1, 1)
+    ax.imshow(bg, extent=(0, 16, 0, 9), origin="lower", aspect="auto", zorder=0,
+              cmap=LinearSegmentedColormap.from_list("bg", ["#FFFFFF", "#EAEEF8"]))
 
-    # ---- two big role columns ------------------------------------------------
-    # Swin column
-    rbox(ax, 0.4, 4.6, 6.9, 3.05, "#EEF2FA", ec=C_SWIN, lw=2.0)
-    txt(ax, 0.75, 7.28, "SWIN TRANSFORMER  =  ENCODER", size=13.5, weight="bold",
-        color=C_SWIN, ha="left")
-    txt(ax, 0.75, 6.96, "“the eyes & brain” — extract multi-scale global features",
-        size=10, color="#55617a", ha="left", style="italic")
-    swin_pts = [
-        "Shifted-window self-attention → long-range context",
-        "Windowing keeps 3D attention memory-feasible",
-        "4 hierarchical stages: 48→96→192→384 ch,  H/4→H/32",
-        "Captures whole-tumor / edema relationships a CNN's",
-        "   limited receptive field would miss",
+    # ===== HERO (gradient) ====================================================
+    grad_fill(ax, 0.5, 5.55, 9.4, 2.95, *G_IND, diagonal=True, r=0.12, z=2)
+    card(ax, 0.85, 7.92, 3.05, 0.42, fc="#FFFFFF", ec="none", r=0.21, shadow=False, z=4)
+    txt(ax, 2.37, 8.13, "HYBRID 3D SEGMENTATION", size=8.6, weight="bold",
+        color="#4F46E5", z=5)
+    txt(ax, 0.85, 7.18, "OncoSeg", size=40, weight="bold", color="white", ha="left", z=5)
+    txt(ax, 0.9, 6.62, "Swin-Transformer encoder  ×  CNN decoder", size=13,
+        color="#E5E7FB", ha="left", weight="bold", z=5)
+    hero_lines = [
+        ("Transformer", " sees globally."),
+        ("CNN", " reconstructs locally."),
+        ("Cross-attention", " bridges the two."),
     ]
-    for i, s in enumerate(swin_pts):
-        txt(ax, 0.78, 6.55 - i * 0.36, ("•  " if not s.startswith("   ") else "    ") + s.strip(),
-            size=10, color=C_INK, ha="left")
+    for i, (a, b) in enumerate(hero_lines):
+        y = 6.12 - i * 0.34
+        txt(ax, 0.9, y, "›", size=12, color="#C7D2FE", ha="left", weight="bold", z=5)
+        txt(ax, 1.18, y, a, size=11.5, color="white", ha="left", weight="bold", z=5)
+        off = 1.18 + 0.085 * len(a) + 0.12
+        txt(ax, off, y, b, size=11.5, color="#D9DEF7", ha="left", z=5)
 
-    # CNN column
-    rbox(ax, 7.7, 4.6, 6.9, 3.05, "#EAF5F1", ec=C_CNN, lw=2.0)
-    txt(ax, 8.05, 7.28, "CNN  =  DECODER", size=13.5, weight="bold", color=C_CNN, ha="left")
-    txt(ax, 8.05, 6.96, "“the hands” — rebuild voxel-level masks at full resolution",
-        size=10, color="#55617a", ha="left", style="italic")
-    cnn_pts = [
-        "Transposed-conv upsampling → precise boundaries",
-        "InstanceNorm + LeakyReLU refine local structure",
-        "Dense per-voxel prediction, parameter/memory-efficient",
-        "Self-attention here would explode (tokens = H·W·D)",
-        "Recovers the 4× patch-embed downsampling at the head",
-    ]
-    for i, s in enumerate(cnn_pts):
-        txt(ax, 8.08, 6.55 - i * 0.36, "•  " + s, size=10, color=C_INK, ha="left")
+    # ===== SWIN + CNN role cards (stacked, right) =============================
+    rx, rw = 10.2, 5.3
+    # Swin
+    card(ax, rx, 7.175, rw, 1.325, z=2)
+    grad_fill(ax, rx, 7.175, 0.14, 1.325, *G_IND, r=0.02, shadow=False, z=3)  # accent bar
+    txt(ax, rx + 0.42, 8.18, "ENCODER", size=8.4, weight="bold", color="#4F46E5", ha="left", z=4)
+    txt(ax, rx + 0.42, 7.82, "Swin Transformer", size=13, weight="bold", color=INK, ha="left", z=4)
+    txt(ax, rx + 0.42, 7.46, "Shifted-window self-attention · 4 stages 48→384 ch",
+        size=8.8, color=MUTE, ha="left", z=4)
+    txt(ax, rx + 0.42, 7.26, "→ long-range global context, memory-feasible in 3D",
+        size=8.8, color=MUTE, ha="left", z=4)
+    # CNN
+    card(ax, rx, 5.55, rw, 1.325, z=2)
+    grad_fill(ax, rx, 5.55, 0.14, 1.325, *G_TEAL, r=0.02, shadow=False, z=3)
+    txt(ax, rx + 0.42, 6.56, "DECODER", size=8.4, weight="bold", color="#0D9488", ha="left", z=4)
+    txt(ax, rx + 0.42, 6.20, "CNN", size=13, weight="bold", color=INK, ha="left", z=4)
+    txt(ax, rx + 0.42, 5.84, "Transposed-conv upsampling · InstanceNorm + LeakyReLU",
+        size=8.8, color=MUTE, ha="left", z=4)
+    txt(ax, rx + 0.42, 5.64, "→ sharp per-voxel boundaries, parameter-efficient",
+        size=8.8, color=MUTE, ha="left", z=4)
 
-    # connecting arrows + cross-attn chip in the middle
-    arrow(ax, (7.32, 6.1), (8.55, 6.1), color=C_XATTN, lw=2.6, rad=0.0)
-    arrow(ax, (8.55, 5.2), (7.32, 5.2), color=C_XATTN, lw=2.6, rad=0.0)
-    rbox(ax, 6.55, 5.4, 1.9, 0.7, C_XATTN, ec=C_XATTN, lw=1.4, r=0.2)
-    txt(ax, 7.5, 5.75, "Cross-Attention", size=9.2, weight="bold", color="white")
+    # ===== CROSS-ATTENTION strip (full width) ================================
+    card(ax, 0.5, 4.0, 15.0, 1.25, z=2)
+    grad_fill(ax, 0.5, 4.0, 0.16, 1.25, *G_AMBER, r=0.02, shadow=False, z=3)
+    chip(ax, 0.95, 4.78, "THE TWIST", "#F97316")
+    txt(ax, 2.7, 4.99, "Cross-Attention Skip", size=13, weight="bold", color=INK, ha="left", z=4)
+    txt(ax, 0.95, 4.42,
+        "Plain U-Nets concatenate encoder→decoder. OncoSeg lets the decoder QUERY the encoder:",
+        size=10, color=INK, ha="left", z=4)
+    txt(ax, 0.95, 4.14,
+        "decoder = Query     encoder = Key / Value     →   pulls only the relevant global cues, aligning Swin semantics with CNN geometry  (ablated by no_xattn).",
+        size=9.6, color=MUTE, ha="left", z=4)
 
-    # ---- cross-attention explainer strip ------------------------------------
-    rbox(ax, 0.4, 3.05, 14.2, 1.25, C_PANEL, ec=C_XATTN, lw=1.8)
-    txt(ax, 0.72, 3.95, "CROSS-ATTENTION SKIP  (the project's twist)", size=12,
-        weight="bold", color=C_XATTN, ha="left")
-    txt(ax, 0.72, 3.55,
-        "Plain U-Nets concat encoder→decoder. OncoSeg instead lets the decoder QUERY the encoder:",
-        size=10, color=C_INK, ha="left")
-    txt(ax, 0.72, 3.24,
-        "decoder feature = Query    encoder feature = Key / Value   →   selectively pull the relevant global cues; aligns Swin's semantics with CNN's geometry (ablated by  no_xattn).",
-        size=9.6, color="#55617a", ha="left")
-
-    # ---- stats row -----------------------------------------------------------
+    # ===== STAT bento cards ==================================================
     stats = [
-        ("Best Dice", "0.797", "MSD Brain, 50 ep", C_SWIN),
-        ("WT / TC / ET", "0.85 / 0.79 / 0.75", "per-region Dice", C_CNN),
-        ("vs UNet3D", "5× fewer params", "wins all regions", C_BOTTLE),
-        ("Calibration", "ECE 0.010", "MC-Dropout, reliable", C_HEAD),
-        ("Validation", "LUMIERE", "longitudinal RECIST", C_XATTN),
+        ("0.797", "Best Dice", "MSD Brain · 50 epochs", G_IND),
+        ("5×", "Fewer params", "beats UNet3D, all regions", G_TEAL),
+        ("0.010", "ECE calibration", "MC-Dropout, reliable", G_AMBER),
+        ("0.85", "Whole-tumor Dice", "TC 0.79 · ET 0.75", G_ROSE),
     ]
-    sw = 2.74
-    for i, (k, v, sub, col) in enumerate(stats):
-        x = 0.4 + i * (sw + 0.18)
-        rbox(ax, x, 1.35, sw, 1.4, "white", ec=col, lw=2.0)
-        txt(ax, x + sw / 2, 2.4, k, size=10, weight="bold", color=col)
-        txt(ax, x + sw / 2, 2.02, v, size=15, weight="bold", color=C_INK)
-        txt(ax, x + sw / 2, 1.6, sub, size=8.5, color="#7a8499")
+    sw = (15.0 - 3 * 0.3) / 4
+    for i, (val, label, sub, grad) in enumerate(stats):
+        x = 0.5 + i * (sw + 0.3)
+        card(ax, x, 2.05, sw, 1.62, z=2)
+        grad_fill(ax, x + 0.32, 3.34, 0.55, 0.16, *grad, r=0.08, shadow=False, z=3)
+        txt(ax, x + 0.34, 2.92, val, size=27, weight="bold", color=grad[0], ha="left", z=4)
+        txt(ax, x + 0.34, 2.46, label, size=10.5, weight="bold", color=INK, ha="left", z=4)
+        txt(ax, x + 0.34, 2.2, sub, size=8.4, color=MUTE, ha="left", z=4)
 
-    # ---- footer pipeline -----------------------------------------------------
-    flow = ["4-modal MRI", "Swin encode", "X-attn skips", "CNN decode",
-            "TC/WT/ET mask", "RECIST", "CR/PR/SD/PD"]
-    fx = 0.55
-    fy = 0.6
-    cols = [C_SWIN, C_SWIN, C_XATTN, C_CNN, C_HEAD, C_HEAD, C_HEAD]
-    for i, (label, col) in enumerate(zip(flow, cols)):
-        w = 1.78
-        rbox(ax, fx, fy, w, 0.55, col, ec=col, lw=0, r=0.16, shadow=False)
-        txt(ax, fx + w / 2, fy + 0.275, label, size=8.8, weight="bold", color="white")
+    # ===== PIPELINE pills =====================================================
+    flow = [
+        ("4-modal MRI", G_SLATE), ("Swin encode", G_IND), ("X-attn skip", G_AMBER),
+        ("CNN decode", G_TEAL), ("TC / WT / ET", G_ROSE), ("RECIST", G_PURP),
+        ("CR/PR/SD/PD", (INK, "#334155")),
+    ]
+    pw = (15.0 - 6 * 0.34) / 7
+    fx, fy, fh = 0.5, 0.78, 0.6
+    for i, (label, grad) in enumerate(flow):
+        pill(ax, fx, fy, pw, fh, grad[0], grad[1], label, fs=8.6)
         if i < len(flow) - 1:
-            arrow(ax, (fx + w, fy + 0.275), (fx + w + 0.18, fy + 0.275),
-                  color="#9aa4b6", lw=1.6)
-        fx += w + 0.18
+            arrow(ax, (fx + pw + 0.04, fy + fh / 2), (fx + pw + 0.30, fy + fh / 2),
+                  color="#94A3B8", lw=1.8, z=4)
+        fx += pw + 0.34
+    txt(ax, 0.5, 0.36,
+        "Validated longitudinally on LUMIERE — 91 GBM patients, 638 timepoints — against expert RANO assessment.",
+        size=8.6, color=MUTE, ha="left", style="italic")
 
-    fig.tight_layout(pad=0.5)
     for ext in ("png", "svg"):
-        fig.savefig(f"figures/infographic.{ext}", dpi=150, facecolor=C_BG,
-                    bbox_inches="tight")
+        fig.savefig(f"figures/infographic.{ext}", dpi=150, facecolor="white",
+                    bbox_inches="tight", pad_inches=0.15)
     plt.close(fig)
     print("wrote figures/infographic.{png,svg}")
 
