@@ -95,11 +95,235 @@
 
   @media (max-width:760px){#stats,#title,#why{display:none}}
   @media (max-height:720px){#why{top:150px}}
+
+  /* ===== tab bar ===== */
+  #tabs{position:absolute;top:22px;left:50%;transform:translateX(-50%);display:flex;gap:6px;padding:5px;z-index:30}
+  #tabs .tab{cursor:pointer;font-size:12.5px;font-weight:700;color:#aeb6d4;padding:9px 17px;border-radius:11px;transition:.15s;white-space:nowrap}
+  #tabs .tab:hover{color:#fff}
+  #tabs .tab.active{background:linear-gradient(100deg,#4f46e5,#7c3aed);color:#fff;box-shadow:0 8px 20px -8px #4f46e5}
+
+  /* ===== deep-dive view ===== */
+  #deepdive{position:fixed;inset:0;z-index:25;overflow-y:auto;display:none;
+    background:radial-gradient(1100px 560px at 50% -8%, rgba(40,46,90,.55), transparent), #070912}
+  #deepdive.show{display:block}
+  .dd-wrap{max-width:1000px;margin:0 auto;padding:88px 28px 90px}
+  .dd-h1{font-size:31px;font-weight:800;letter-spacing:-.02em;line-height:1.1;
+    background:linear-gradient(100deg,#a5b4fc,#e9d5ff 50%,#5eead4);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .dd-lead{font-size:14px;color:#aab2cc;margin:12px 0 8px;line-height:1.65;max-width:780px}
+  .dd-sec{margin:34px 0}
+  .dd-sec h2{font-size:19px;font-weight:800;color:#eef1fb;margin-bottom:4px;display:flex;align-items:center;gap:11px}
+  .dd-sec h2 .n{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-size:13px;
+    background:linear-gradient(100deg,#4f46e5,#7c3aed);color:#fff;flex:none}
+  .dd-sec p{font-size:13px;color:#c4cce0;line-height:1.7;margin:9px 0}
+  .dd-sec p b{color:#fff}
+  .card2{background:rgba(18,22,40,.6);border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:18px 20px;margin:14px 0}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:rgba(255,255,255,.08);
+    padding:2px 6px;border-radius:6px;font-size:12px;color:#c7d2fe}
+  pre{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:#0b0f1e;
+    border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px 16px;overflow-x:auto;
+    font-size:12px;line-height:1.65;color:#cdd4ea;margin:10px 0}
+  pre .c{color:#6b7488}pre .k{color:#c792ea}pre .s{color:#86e1a8}pre .y{color:#fcd34d}
+
+  .shp{width:100%;border-collapse:collapse;font-size:12.5px;margin:6px 0}
+  .shp th,.shp td{text-align:left;padding:8px 11px;border-bottom:1px solid rgba(255,255,255,.07)}
+  .shp th{color:#9aa3bd;font-weight:700;font-size:10.5px;letter-spacing:.05em;text-transform:uppercase}
+  .shp td .tag{font-family:monospace;font-size:11.5px;color:#a5b4fc;background:rgba(99,102,241,.14);padding:2px 7px;border-radius:6px}
+  .shp td.role{color:#9aa3bd}
+  .shp tr.enc td:first-child{border-left:3px solid #6366f1}
+  .shp tr.dec td:first-child{border-left:3px solid #14b8a6}
+  .shp tr.bn  td:first-child{border-left:3px solid #a855f7}
+  .shp tr.io  td:first-child{border-left:3px solid #64748b}
+
+  .step{display:flex;gap:14px;margin:14px 0}
+  .step .num{width:27px;height:27px;border-radius:8px;background:rgba(99,102,241,.2);border:1px solid rgba(99,102,241,.5);
+    color:#c7d2fe;font-weight:800;font-size:12px;display:grid;place-items:center;flex:none;margin-top:2px}
+  .step .body{flex:1;min-width:0}
+  .step .body h4{font-size:14px;font-weight:800;color:#eef1fb;margin-bottom:2px}
+  .step .body p{font-size:12.5px;margin:5px 0}
+
+  .mxrow{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;margin:10px 0}
+  .mx{display:inline-block;vertical-align:middle}
+  .mx .lab{font-size:10.5px;color:#9aa3bd;margin-bottom:4px;font-family:monospace}
+  .mx table{border-collapse:collapse}
+  .mx td{font-family:monospace;font-size:12px;padding:5px 9px;text-align:right;color:#dfe6f5;border:1px solid rgba(255,255,255,.07)}
+  .mx.q td{color:#a5b4fc}.mx.kv td{color:#fda4af}
+  .mx .op{font-size:18px;color:#7c87a6;padding:0 2px}
+  .heat td{color:#08101f;font-weight:800;border-color:rgba(0,0,0,.2)}
+  .callout{border-left:3px solid #f59e0b;background:rgba(245,158,11,.08);padding:12px 16px;border-radius:10px;
+    font-size:12.5px;color:#ecdcc0;margin:14px 0;line-height:1.6}
+  .callout b{color:#fcd34d}
+  .dd-foot{font-size:11px;color:#6b7488;margin-top:34px;border-top:1px solid rgba(255,255,255,.07);padding-top:16px;line-height:1.6}
 </style>
 </head>
 <body>
 <div id="app"></div>
 <div id="loading">loading 3D scene…</div>
+
+<div id="tabs" class="glass">
+  <div class="tab active" data-view="3d">3D Architecture</div>
+  <div class="tab" data-view="deep">Deep Dive: Cross-Attention</div>
+</div>
+
+<div id="deepdive">
+  <div class="dd-wrap">
+    <div class="dd-h1">Cross-Attention Skip — a full walk-through</div>
+    <p class="dd-lead">We trace one volume through the whole network, then zoom into a single cross-attention skip
+      and compute it by hand on a tiny worked example. Every number below is the real result of the math — nothing is faked.</p>
+
+    <!-- ===================== PART 1 ===================== -->
+    <div class="dd-sec">
+      <h2><span class="n">1</span> The whole forward pass, by shape</h2>
+      <p>Take one MRI patch: <code>x = [B=1, C=4, 128, 128, 128]</code> (T1, T1c, T2, FLAIR). The <b>Swin encoder</b> shrinks space
+        while growing channels; the <b>CNN decoder</b> does the reverse, pulling encoder features back in through cross-attention skips.</p>
+      <div class="card2">
+        <table class="shp">
+          <tr><th>Stage</th><th>Output shape</th><th>What happens</th></tr>
+          <tr class="io"><td>Input</td><td><span class="tag">[1, 4, 128³]</span></td><td class="role">4 MRI modalities stacked as channels</td></tr>
+          <tr class="enc"><td>Patch-embed + Swin Stage 1</td><td><span class="tag">[1, 48, 32³]</span></td><td class="role">4×4×4 patches ↓4 · window self-attention</td></tr>
+          <tr class="enc"><td>Swin Stage 2</td><td><span class="tag">[1, 96, 16³]</span></td><td class="role">patch-merge ↓2, channels ×2</td></tr>
+          <tr class="enc"><td>Swin Stage 3</td><td><span class="tag">[1, 192, 8³]</span></td><td class="role">depth-6 attention (richest semantics)</td></tr>
+          <tr class="bn"><td>Swin Stage 4 — bottleneck</td><td><span class="tag">[1, 384, 4³]</span></td><td class="role">most abstract global features</td></tr>
+          <tr class="dec"><td>Decoder Block 1 &nbsp;<b style="color:#f59e0b">⟵ x-attn skip ⟵ Stage 3</b></td><td><span class="tag">[1, 192, 8³]</span></td><td class="role">ConvT3d ↑2, fuse Stage-3 features</td></tr>
+          <tr class="dec"><td>Decoder Block 2 &nbsp;<b style="color:#f59e0b">⟵ x-attn skip ⟵ Stage 2</b></td><td><span class="tag">[1, 96, 16³]</span></td><td class="role">ConvT3d ↑2, fuse Stage-2 features</td></tr>
+          <tr class="dec"><td>Decoder Block 3 &nbsp;<b style="color:#f59e0b">⟵ x-attn skip ⟵ Stage 1</b></td><td><span class="tag">[1, 48, 32³]</span></td><td class="role">ConvT3d ↑2, fuse Stage-1 features</td></tr>
+          <tr class="dec"><td>Upsample head</td><td><span class="tag">[1, 48, 128³]</span></td><td class="role">ConvT3d ↑4 recovers the patch-embed downsample</td></tr>
+          <tr class="io"><td>Final 1×1×1 conv</td><td><span class="tag">[1, 3, 128³]</span></td><td class="role">TC / WT / ET sigmoid logits</td></tr>
+        </table>
+      </div>
+      <p>The three <b style="color:#f59e0b">⟵ x-attn skip</b> rows are the only place encoder and decoder talk. We now open one of them.</p>
+    </div>
+
+    <!-- ===================== PART 2 ===================== -->
+    <div class="dd-sec">
+      <h2><span class="n">2</span> One skip, at real scale (Decoder Block 1)</h2>
+      <p>This skip fuses <b>Swin Stage 3</b> (encoder) into <b>Decoder Block 1</b>. After the decoder upsamples to <code>8³</code>,
+        both tensors live on an <code>8×8×8</code> grid, so each has <b>N = 512 voxels</b> (tokens), each a <b>192-dim</b> vector,
+        split across <b>12 heads</b> (head_dim = 16). The module is a drop-in replacement for the usual <code>x + skip</code>:</p>
+      <pre><span class="c"># src/models/modules/cnn_decoder.py — DecoderBlock.forward</span>
+x = self.upsample(x)                        <span class="c"># [1,192,8³] decoder side</span>
+<span class="k">if</span> cross_attn <span class="k">is not</span> <span class="k">None</span>:
+    x = cross_attn(encoder_feat=skip,        <span class="c"># Stage-3 [1,192,8³] → Key/Value</span>
+                   decoder_feat=x)           <span class="c"># decoder    [1,192,8³] → Query</span>
+<span class="k">else</span>:
+    x = x + skip                             <span class="c"># the plain U-Net fallback (ablation: no_xattn)</span>
+x = self.conv(x)</pre>
+    </div>
+
+    <!-- ===================== PART 3 ===================== -->
+    <div class="dd-sec">
+      <h2><span class="n">3</span> The mechanism, computed by hand</h2>
+      <p>512 tokens × 192 dims is too big to print, so here is a <b>tiny faithful version</b>: the encoder offers
+        <b>3 regions</b> (Key/Value), the decoder asks from <b>2 voxels</b> (Query), and each feature has <b>4 channels</b>
+        we'll read as <span class="mono">[core, edema, enhancing, background]</span>. (Projections set to identity so you can follow the arithmetic; the real module learns them.)</p>
+
+      <div class="card2">
+        <div class="mxrow">
+          <div class="mx kv">
+            <div class="lab">encoder tokens — Key / Value  (3 regions × 4 ch)</div>
+            <table>
+              <tr><td>3.0</td><td>0.5</td><td>1.0</td><td>0.0</td><td class="row-tags" style="border:none">← e1 tumor-core</td></tr>
+              <tr><td>0.5</td><td>3.0</td><td>0.5</td><td>0.5</td><td class="row-tags" style="border:none">← e2 edema</td></tr>
+              <tr><td>0.0</td><td>0.2</td><td>0.0</td><td>3.0</td><td class="row-tags" style="border:none">← e3 background</td></tr>
+            </table>
+          </div>
+          <div class="mx q">
+            <div class="lab">decoder tokens — Query (2 voxels × 4 ch)</div>
+            <table>
+              <tr><td>2.5</td><td>0.5</td><td>1.0</td><td>0.0</td><td class="row-tags" style="border:none">← qA core-like</td></tr>
+              <tr><td>0.5</td><td>2.0</td><td>0.5</td><td>1.0</td><td class="row-tags" style="border:none">← qB edema-ish</td></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="step"><div class="num">1</div><div class="body">
+        <h4>Flatten to tokens</h4>
+        <p><code>encoder_feat.flatten(2).transpose(1,2)</code> turns <code>[B,C,H,W,D]</code> into a sequence <code>[B, N, C]</code>.
+          Each voxel becomes one token. Here N=3 (encoder) and N=2 (decoder).</p>
+      </div></div>
+
+      <div class="step"><div class="num">2</div><div class="body">
+        <h4>LayerNorm each side <i>separately</i></h4>
+        <p><code>norm_enc</code> and <code>norm_dec</code> are two different norms — because Swin (attention space) and CNN (conv space)
+          features have different scales/statistics. Normalising each first puts them on comparable footing before the dot product. <i>(Omitted numerically here so the multiplication stays readable.)</i></p>
+      </div></div>
+
+      <div class="step"><div class="num">3</div><div class="body">
+        <h4>Project: Q from decoder, K &amp; V from encoder</h4>
+        <p><code>q_proj(decoder)</code>, <code>k_proj(encoder)</code>, <code>v_proj(encoder)</code>. The decoder asks the questions;
+          the encoder supplies both the "match keys" and the "content to return". With identity projections, Q = decoder tokens, K = V = encoder tokens.</p>
+      </div></div>
+
+      <div class="step"><div class="num">4</div><div class="body">
+        <h4>Similarity: scores = Q·Kᵀ × scale</h4>
+        <p>scale = 1/√head_dim = 1/√4 = <b>0.5</b>, which keeps the dot products from blowing up. Row = a decoder voxel, column = an encoder region.</p>
+        <div class="mxrow">
+          <div class="mx"><div class="lab">scores  (2×3)</div><table>
+            <tr><td>4.375</td><td>1.625</td><td>0.050</td><td class="row-tags" style="border:none">← qA vs (e1,e2,e3)</td></tr>
+            <tr><td>1.500</td><td>3.500</td><td>1.700</td><td class="row-tags" style="border:none">← qB vs (e1,e2,e3)</td></tr>
+          </table></div>
+        </div>
+        <p>qA's biggest score (4.375) is against <b>e1 tumor-core</b> — exactly the region it resembles. qB peaks (3.500) on <b>e2 edema</b>.</p>
+      </div></div>
+
+      <div class="step"><div class="num">5</div><div class="body">
+        <h4>Softmax → attention weights</h4>
+        <p><code>attn.softmax(dim=-1)</code> turns each row into a probability distribution over encoder regions — "how much of each to pull".</p>
+        <div class="mxrow">
+          <div class="mx heat"><div class="lab" style="color:#9aa3bd">weights — qA</div><table><tr>
+            <td style="background:#6366f1">92.8%</td><td style="background:#cbd0f6">5.9%</td><td style="background:#e7e9fb">1.2%</td>
+          </tr></table></div>
+          <div class="mx heat"><div class="lab" style="color:#9aa3bd">weights — qB</div><table><tr>
+            <td style="background:#c9cdf5">10.4%</td><td style="background:#2dd4bf">76.9%</td><td style="background:#c3eee7">12.7%</td>
+          </tr></table></div>
+        </div>
+        <p><b>qA pulls 92.8% from tumor-core</b>; qB is a blend dominated by edema (76.9%). The decoder retrieves <i>selectively</i>, not the whole encoder map.</p>
+      </div></div>
+
+      <div class="step"><div class="num">6</div><div class="body">
+        <h4>Weighted sum: out = weights · V</h4>
+        <p>Each decoder voxel gets a new 4-ch feature = its attention-weighted mix of the encoder <b>Value</b> rows.</p>
+        <div class="mxrow">
+          <div class="mx"><div class="lab">out  (2×4)</div><table>
+            <tr><td>2.815</td><td>0.645</td><td>0.958</td><td>0.067</td><td class="row-tags" style="border:none">← qA ≈ e1 core</td></tr>
+            <tr><td>0.697</td><td>2.384</td><td>0.488</td><td>0.766</td><td class="row-tags" style="border:none">← qB ≈ e2 edema</td></tr>
+          </table></div>
+        </div>
+        <p>qA's output ≈ the tumor-core vector <code>[3,0.5,1,0]</code> — it successfully fetched the right high-level evidence to sharpen that voxel.</p>
+      </div></div>
+
+      <div class="step"><div class="num">7</div><div class="body">
+        <h4>Residual on the <i>decoder</i> side + FFN</h4>
+        <p><code>out = dec_seq + out</code> then <code>out = out + ffn(norm_out(out))</code>. The residual is anchored on the decoder,
+          so cross-attention is an <b>additive refinement</b>, never a replacement — if attention learns nothing, the decoder trunk survives,
+          and the module degrades gracefully to a plain skip.</p>
+        <div class="mxrow">
+          <div class="mx q"><div class="lab">decoder + out  (pre-FFN)</div><table>
+            <tr><td>5.315</td><td>1.145</td><td>1.958</td><td>0.067</td></tr>
+            <tr><td>1.197</td><td>4.384</td><td>0.988</td><td>1.766</td></tr>
+          </table></div>
+        </div>
+      </div></div>
+
+      <div class="step"><div class="num">8</div><div class="body">
+        <h4>Reshape back to a volume</h4>
+        <p><code>out.transpose(1,2).reshape(B, C_dec, H, W, D)</code> folds the tokens back into an <code>8×8×8×192</code> feature map,
+          which the next <code>Conv3d·InstanceNorm·LeakyReLU</code> refines. Shape in == shape out, so it slots straight into the U-Net.</p>
+      </div></div>
+
+      <div class="callout">
+        <b>Why this beats plain <code>x + skip</code>:</b> concatenation forces the decoder to swallow the <i>entire</i> encoder map and sort it out later.
+        Cross-attention lets each decoder voxel <b>ask for exactly the encoder evidence it needs</b> — qA grabbed tumor-core, qB grabbed edema —
+        bridging the semantic gap between Swin's global features and the CNN's local geometry. The cost: attention is O(N²) over voxels,
+        which is why the encoder itself stays windowed and the ablation <code>no_xattn</code> exists to prove the trade is worth it.
+      </div>
+    </div>
+
+    <div class="dd-foot">Numbers computed with scaled dot-product attention (scale 1/√4 = 0.5), identity Q/K/V projections for clarity.
+      Real module: <code>src/models/modules/cross_attention_skip.py</code> · learned projections, 12 heads, 512 tokens at this scale.
+      Switch back to <b>3D Architecture</b> and hover the amber arcs to see these skips in the model.</div>
+  </div>
+</div>
 
 <div id="title" class="glass">
   <span class="tag">HYBRID 3D TUMOR SEGMENTATION</span>
@@ -443,6 +667,22 @@ why.querySelectorAll('.sec').forEach(s=>{
   s.addEventListener('mouseleave', ()=>setExplain([]));
 });
 
+// ---- tab switching: 3D view  <->  deep-dive --------------------------------
+const tabsEl = document.getElementById('tabs');
+const deepEl = document.getElementById('deepdive');
+let activeView = '3d';
+function setView(v){
+  activeView = v;
+  tabsEl.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.view===v));
+  deepEl.classList.toggle('show', v==='deep');
+  // hide 3D-only overlays while reading the deep dive
+  for (const id of ['title','stats','why','legend','controls'])
+    document.getElementById(id).style.display = (v==='deep') ? 'none' : '';
+  if (v==='deep') deepEl.scrollTop = 0;
+}
+tabsEl.querySelectorAll('.tab').forEach(t=>t.addEventListener('click', ()=>setView(t.dataset.view)));
+if (location.hash === '#deep') setView('deep');   // deep-linkable
+
 // ---- resize ----------------------------------------------------------------
 addEventListener('resize', ()=>{
   camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
@@ -457,6 +697,7 @@ document.getElementById('loading').remove();
 function animate(){
   requestAnimationFrame(animate);
   const dt = clock.getDelta();
+  if (activeView !== '3d') return;   // pause 3D work while the deep-dive tab is open
   controls.update();
   // flow along main path
   for (const m of dots){
