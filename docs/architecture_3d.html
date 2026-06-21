@@ -66,7 +66,35 @@
 
   #loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
     font-size:13px;color:#7c87a6;background:#05060d}
-  @media (max-width:760px){#stats,#title{display:none}}
+
+  /* right-side floating "why" panel */
+  #why{position:absolute;right:24px;top:205px;width:336px;max-height:calc(100vh - 240px);
+    display:flex;flex-direction:column;overflow:hidden;z-index:16}
+  #why .bar{display:flex;align-items:center;gap:10px;padding:13px 14px 13px 16px;cursor:grab;
+    border-bottom:1px solid rgba(255,255,255,.08);flex:none}
+  #why .bar.drag{cursor:grabbing}
+  #why .bar h2{font-size:13.5px;font-weight:800;letter-spacing:.01em;flex:1}
+  #why .bar .mini{font-size:10px;color:#7c87a6;font-weight:600}
+  #why .bar .x{cursor:pointer;width:24px;height:24px;border-radius:8px;display:grid;place-items:center;
+    color:#aeb6d4;background:rgba(255,255,255,.06);font-size:13px;line-height:1;flex:none}
+  #why .bar .x:hover{background:rgba(255,255,255,.15);color:#fff}
+  #why .body{overflow-y:auto;padding:4px 4px 8px}
+  #why.collapsed .body{display:none}
+  #why.collapsed{max-height:none}
+  .sec{padding:10px 12px;border-radius:12px;margin:6px;border:1px solid transparent;transition:.15s}
+  .sec:hover{background:rgba(120,140,220,.10);border-color:rgba(255,255,255,.10)}
+  .sec h4{font-size:12px;font-weight:800;display:flex;align-items:center;gap:8px;margin-bottom:5px;color:#eef1fb}
+  .sec h4 .b{width:9px;height:9px;border-radius:3px;box-shadow:0 0 9px currentColor;flex:none}
+  .sec h4 .why-q{margin-left:auto;font-size:9.5px;font-weight:700;color:#8b93b0;opacity:0}
+  .sec:hover .why-q{opacity:1}
+  .sec p{font-size:11px;color:#c4cce0;line-height:1.52}
+  .sec p b{color:#fff;font-weight:700}
+  #why .body::-webkit-scrollbar{width:8px}
+  #why .body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:4px}
+  #why .body::-webkit-scrollbar-track{background:transparent}
+
+  @media (max-width:760px){#stats,#title,#why{display:none}}
+  @media (max-height:720px){#why{top:150px}}
 </style>
 </head>
 <body>
@@ -100,6 +128,40 @@
   <div class="btn active" id="btnRotate">Auto-rotate</div>
   <div class="btn" id="btnFlow">Flow</div>
   <div class="btn" id="btnReset">Reset</div>
+</div>
+
+<div id="why" class="glass">
+  <div class="bar">
+    <h2>Why build it this way?</h2>
+    <span class="mini">hover a card →</span>
+    <div class="x" title="collapse">–</div>
+  </div>
+  <div class="body">
+    <div class="sec" data-blocks="s1 s2 s3 s4 d1 d2 d3">
+      <h4><span class="b" style="background:#c7d2fe;color:#c7d2fe"></span>Asymmetric hybrid<span class="why-q">all blocks</span></h4>
+      <p>Segmentation needs <b>both</b> global context and pixel-precise boundaries. One family of layers can't do both cheaply, so OncoSeg splits the job: <b>Transformer encodes, CNN decodes</b>.</p>
+    </div>
+    <div class="sec" data-blocks="s1 s2 s3 s4">
+      <h4><span class="b" style="background:#6366f1;color:#6366f1"></span>Swin encoder = global context<span class="why-q">encoder ↓</span></h4>
+      <p>A tumour voxel's label depends on <b>far-away anatomy</b>. Self-attention is global by construction; <b>shifted windows</b> keep 3D attention memory-feasible. 4 hierarchical stages give the multi-scale features a U-Net needs.</p>
+    </div>
+    <div class="sec" data-blocks="d1 d2 d3 out">
+      <h4><span class="b" style="background:#14b8a6;color:#14b8a6"></span>CNN decoder = local detail<span class="why-q">decoder ↑</span></h4>
+      <p>Output must return to full resolution. <b>Transposed convs</b> rebuild smooth boundaries and are parameter/memory-efficient. Attention here would explode (tokens = H·W·D), so CNN is the right tool for dense reconstruction.</p>
+    </div>
+    <div class="sec" data-blocks="s1 s2 s3 d1 d2 d3">
+      <h4><span class="b" style="background:#f59e0b;color:#f59e0b"></span>Cross-attention skips<span class="why-q">the twist</span></h4>
+      <p>Plain U-Nets just concatenate skips. Here the <b>decoder queries the encoder</b> (Q=decoder, K/V=encoder), pulling only the relevant cues — this <b>aligns Swin's semantics with the CNN's geometry</b>. Ablated by <code>no_xattn</code>.</p>
+    </div>
+    <div class="sec" data-blocks="s4">
+      <h4><span class="b" style="background:#a855f7;color:#a855f7"></span>Bottleneck + temporal<span class="why-q">stage 4</span></h4>
+      <p>The deepest stage holds the most abstract global features. Optional <b>temporal attention</b> fuses baseline ↔ follow-up here, so the same backbone supports <b>longitudinal</b> response tracking.</p>
+    </div>
+    <div class="sec" data-blocks="out">
+      <h4><span class="b" style="background:#f43f5e;color:#f43f5e"></span>Heads: deep-sup · MC-dropout · RECIST<span class="why-q">output</span></h4>
+      <p><b>Deep supervision</b> adds gradient signal to decoder stages during training; <b>MC-Dropout</b> turns one model into an uncertainty estimator (ECE 0.010); the mask drives <b>RECIST → CR/PR/SD/PD</b>.</p>
+    </div>
+  </div>
 </div>
 
 <div id="tip" class="glass"></div>
@@ -301,7 +363,22 @@ composer.addPass(new OutputPass());
 const ray = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 const tip = document.getElementById('tip');
+const meshById = Object.fromEntries(meshes.map(m=>[m.userData.id, m]));
+let explained = new Set();   // blocks highlighted from the "why" panel
 let hovered = null;
+
+// restore a mesh to its resting look, honouring an active panel highlight
+function restore(m){
+  if (!m) return;
+  if (explained.has(m.userData.id)){ m.material.emissiveIntensity = 1.0; m.scale.setScalar(1.06); }
+  else { m.material.emissiveIntensity = m.userData.baseEmissive; m.scale.setScalar(1); }
+}
+function setExplain(ids){
+  const next = new Set(ids);
+  explained.forEach(id => { if (!next.has(id)) { explained.delete(id); if (meshById[id] !== hovered) restore(meshById[id]); } });
+  next.forEach(id => { explained.add(id); const m = meshById[id]; if (m && m !== hovered){ m.material.emissiveIntensity = 1.0; m.scale.setScalar(1.06); } });
+}
+
 addEventListener('pointermove', e=>{
   mouse.x = (e.clientX/innerWidth)*2 - 1;
   mouse.y = -(e.clientY/innerHeight)*2 + 1;
@@ -313,8 +390,9 @@ function updateHover(){
   const hit = ray.intersectObjects(meshes, false)[0];
   const obj = hit ? hit.object : null;
   if (obj !== hovered){
-    if (hovered){ hovered.material.emissiveIntensity = hovered.userData.baseEmissive; hovered.scale.setScalar(1); }
+    const prev = hovered;
     hovered = obj;
+    restore(prev);
     if (hovered){
       hovered.material.emissiveIntensity = 0.95;
       hovered.scale.setScalar(1.08);
@@ -336,6 +414,34 @@ btnFlow.classList.add('active');
 btnRotate.onclick=()=>{controls.autoRotate=!controls.autoRotate;btnRotate.classList.toggle('active',controls.autoRotate);};
 btnFlow.onclick=()=>{flowOn=!flowOn;flowGroup.visible=flowOn;btnFlow.classList.toggle('active',flowOn);};
 btnReset.onclick=()=>{controls.target.set(0,0.5,0);camera.position.copy(CAM0);};
+
+// ---- "why" panel: collapse, drag, section -> block highlight ---------------
+const why = document.getElementById('why');
+const bar = why.querySelector('.bar');
+why.querySelector('.x').onclick = ()=>{
+  why.classList.toggle('collapsed');
+  why.querySelector('.x').textContent = why.classList.contains('collapsed') ? '+' : '–';
+};
+let dragging=false, dx=0, dy=0;
+bar.addEventListener('pointerdown', e=>{
+  if (e.target.closest('.x')) return;
+  dragging=true; bar.classList.add('drag');
+  const r = why.getBoundingClientRect();
+  why.style.left=r.left+'px'; why.style.top=r.top+'px'; why.style.right='auto'; why.style.bottom='auto';
+  dx=e.clientX-r.left; dy=e.clientY-r.top;
+  bar.setPointerCapture(e.pointerId);
+});
+bar.addEventListener('pointermove', e=>{
+  if (!dragging) return;
+  why.style.left = Math.max(8, Math.min(innerWidth-why.offsetWidth-8, e.clientX-dx)) + 'px';
+  why.style.top  = Math.max(8, Math.min(innerHeight-58, e.clientY-dy)) + 'px';
+});
+bar.addEventListener('pointerup', ()=>{ dragging=false; bar.classList.remove('drag'); });
+why.querySelectorAll('.sec').forEach(s=>{
+  const ids = (s.dataset.blocks||'').split(' ').filter(Boolean);
+  s.addEventListener('mouseenter', ()=>setExplain(ids));
+  s.addEventListener('mouseleave', ()=>setExplain([]));
+});
 
 // ---- resize ----------------------------------------------------------------
 addEventListener('resize', ()=>{
@@ -361,10 +467,10 @@ function animate(){
     m.userData.t = (m.userData.t + dt*0.16) % 1;
     m.position.copy(m.userData.curve.getPoint(m.userData.t));
   }
-  // gentle pulse on bottleneck
-  const pulse = 0.55 + 0.35*Math.sin(clock.elapsedTime*2);
-  byId.s4 && (meshes.find(x=>x.userData.id==='s4').material.emissiveIntensity =
-    (hovered && hovered.userData.id==='s4') ? 0.95 : pulse);
+  // gentle pulse on bottleneck (unless it's hovered or pinned by the panel)
+  const s4m = meshById.s4;
+  if (s4m && !(hovered && hovered.userData.id==='s4') && !explained.has('s4'))
+    s4m.material.emissiveIntensity = 0.55 + 0.35*Math.sin(clock.elapsedTime*2);
   updateHover();
   composer.render();
   labelRenderer.render(scene, camera);
