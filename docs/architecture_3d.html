@@ -611,24 +611,34 @@ controls.minDistance = 12;
 controls.maxDistance = 48;
 controls.target.set(0, 0.5, 0);
 controls.autoRotate = true;
-controls.autoRotateSpeed = 0.7;
+controls.autoRotateSpeed = 0.35;   // calmer live rotation
 
-// ?az=<deg> pins the camera to a fixed azimuth (used to render preview frames)
+// Preview/export mode: ?az=<deg> pins the camera to a fixed azimuth and
+// freezes the scene (no auto-rotate, no flow particles, no pulse) so frames
+// rendered headlessly are deterministic and seam-free for the looping GIF.
+// &ui=0 hides every overlay panel, leaving a clean model render for a still.
 const _sp = new URLSearchParams(location.search);
-if (_sp.has('az')) {
+const PREVIEW = _sp.has('az');
+const SHOW_UI = _sp.get('ui') !== '0';
+if (PREVIEW) {
   controls.autoRotate = false;
   const az = parseFloat(_sp.get('az')) * Math.PI / 180;
   const R = 23.7, H = 6.5;
   camera.position.set(Math.sin(az) * R, H, Math.cos(az) * R);
   camera.lookAt(controls.target);
 }
+if (!SHOW_UI) {
+  for (const id of ['tabs','title','stats','legend','controls','why','tip']) {
+    const el = document.getElementById(id); if (el) el.style.display = 'none';
+  }
+}
 
 // ---- lights ----------------------------------------------------------------
 scene.add(new THREE.AmbientLight(0x8090c0, 0.55));
 const key = new THREE.DirectionalLight(0xffffff, 1.5); key.position.set(8,14,12); scene.add(key);
 const rim = new THREE.DirectionalLight(0x7c5cff, 0.9); rim.position.set(-12,4,-8); scene.add(rim);
-scene.add(new THREE.PointLight(0x14b8a6, 80, 30).position.set(6,0,4));
-scene.add(new THREE.PointLight(0x6366f1, 80, 30).position.set(-6,0,4));
+const pTeal = new THREE.PointLight(0x14b8a6, 80, 30); pTeal.position.set(6,0,4); scene.add(pTeal);
+const pIndigo = new THREE.PointLight(0x6366f1, 80, 30); pIndigo.position.set(-6,0,4); scene.add(pIndigo);
 
 // subtle ground grid
 const grid = new THREE.GridHelper(80, 60, 0x223, 0x131a2e);
@@ -786,8 +796,9 @@ function kindName(k){return {enc:'Swin encoder',bottleneck:'Bottleneck',dec:'CNN
 const btnRotate=document.getElementById('btnRotate');
 const btnFlow=document.getElementById('btnFlow');
 const btnReset=document.getElementById('btnReset');
-let flowOn=true;
-btnFlow.classList.add('active');
+let flowOn = !PREVIEW;
+flowGroup.visible = flowOn;
+btnFlow.classList.toggle('active', flowOn);
 btnRotate.onclick=()=>{controls.autoRotate=!controls.autoRotate;btnRotate.classList.toggle('active',controls.autoRotate);};
 btnFlow.onclick=()=>{flowOn=!flowOn;flowGroup.visible=flowOn;btnFlow.classList.toggle('active',flowOn);};
 btnReset.onclick=()=>{controls.target.set(0,0.5,0);camera.position.copy(CAM0);};
@@ -868,7 +879,7 @@ function animate(){
   }
   // gentle pulse on bottleneck (unless it's hovered or pinned by the panel)
   const s4m = meshById.s4;
-  if (s4m && !(hovered && hovered.userData.id==='s4') && !explained.has('s4'))
+  if (s4m && !PREVIEW && !(hovered && hovered.userData.id==='s4') && !explained.has('s4'))
     s4m.material.emissiveIntensity = 0.55 + 0.35*Math.sin(clock.elapsedTime*2);
   updateHover();
   composer.render();

@@ -3,21 +3,213 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>OncoSeg · Interactive 3D Architecture</title>
-<meta http-equiv="refresh" content="0; url=architecture_3d.html" />
-<link rel="canonical" href="architecture_3d.html" />
+<title>OncoSeg · Results & Architecture</title>
+<meta name="description" content="OncoSeg — a hybrid Swin-Transformer / CNN model for 3D brain-tumour segmentation and automated RECIST treatment-response assessment. Validated results and interactive architecture." />
 <style>
-  html,body{height:100%;margin:0;background:#05060d;color:#aab2cc;
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
-  .c{height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px}
-  a{color:#a5b4fc}
+  :root{
+    --indigo:#6366f1; --violet:#a855f7; --teal:#14b8a6; --emerald:#10b981;
+    --amber:#f59e0b; --rose:#f43f5e; --ink:#05060d; --panel:rgba(18,22,40,.55);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:
+      radial-gradient(1100px 560px at 80% -10%, rgba(99,102,241,.16), transparent),
+      radial-gradient(900px 520px at 0% 8%, rgba(20,184,166,.12), transparent),
+      var(--ink);
+    color:#e6e9f2;line-height:1.6;min-height:100vh}
+  a{color:#a5b4fc;text-decoration:none}
+  a:hover{color:#c7d2fe}
+  .wrap{max-width:1040px;margin:0 auto;padding:0 24px}
+  .glass{background:var(--panel);border:1px solid rgba(255,255,255,.10);
+    backdrop-filter:blur(14px) saturate(140%);-webkit-backdrop-filter:blur(14px) saturate(140%);
+    border-radius:18px;box-shadow:0 18px 50px -22px rgba(0,0,0,.8)}
+
+  /* ===== hero / header ===== */
+  header{padding:64px 0 26px;text-align:center}
+  .tag{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.14em;
+    color:#c7d2fe;background:rgba(99,102,241,.18);border:1px solid rgba(99,102,241,.45);
+    padding:5px 13px;border-radius:999px;margin-bottom:18px}
+  h1{font-size:clamp(38px,6vw,62px);font-weight:800;letter-spacing:-.03em;line-height:1.02;
+    background:linear-gradient(100deg,#a5b4fc,#e9d5ff 45%,#5eead4);
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{font-size:clamp(15px,2.2vw,19px);color:#aab2cc;margin:16px auto 0;max-width:680px}
+  .flow{margin-top:14px;font-size:13.5px;color:#cdd4ea}
+  .flow b{color:#fff}
+  .cta{margin-top:28px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+  .btn{display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:700;
+    padding:12px 20px;border-radius:13px;border:1px solid rgba(255,255,255,.14);
+    background:rgba(28,33,56,.55);color:#e6e9f2;transition:.15s}
+  .btn:hover{background:rgba(60,70,110,.7);border-color:rgba(255,255,255,.28);color:#fff}
+  .btn.primary{background:linear-gradient(100deg,#4f46e5,#7c3aed);border-color:transparent;color:#fff;
+    box-shadow:0 12px 30px -12px #4f46e5}
+  .btn.primary:hover{filter:brightness(1.08)}
+
+  /* ===== section scaffolding ===== */
+  section{padding:30px 0}
+  .eyebrow{font-size:11.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#8b93b0;margin-bottom:6px}
+  h2{font-size:clamp(24px,3.6vw,32px);font-weight:800;letter-spacing:-.02em;color:#eef1fb}
+  .lead{font-size:15px;color:#aab2cc;margin-top:8px;max-width:760px}
+
+  /* ===== stat cards ===== */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:24px}
+  .stat{padding:20px 18px}
+  .stat .v{font-size:34px;font-weight:800;letter-spacing:-.02em;line-height:1}
+  .stat .k{font-size:13px;font-weight:700;color:#dfe3f0;margin-top:8px}
+  .stat .s{font-size:11.5px;color:#9aa3bd;margin-top:3px}
+
+  /* ===== figures ===== */
+  .figs{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:24px}
+  figure{margin:0}
+  .figcard{padding:14px}
+  .figcard img{width:100%;height:auto;border-radius:10px;display:block;background:#fff}
+  figcaption{font-size:12.5px;color:#9aa3bd;margin-top:10px;line-height:1.5}
+  figcaption b{color:#cdd4ea}
+
+  /* ===== results table ===== */
+  .tbl{width:100%;border-collapse:collapse;margin-top:24px;font-size:14px;overflow:hidden;border-radius:14px}
+  .tbl th,.tbl td{padding:13px 16px;text-align:right;border-bottom:1px solid rgba(255,255,255,.07)}
+  .tbl th:first-child,.tbl td:first-child{text-align:left}
+  .tbl thead th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#9aa3bd;background:rgba(255,255,255,.03)}
+  .tbl tbody tr:hover{background:rgba(120,140,220,.07)}
+  .tbl .win{color:#5eead4;font-weight:800}
+  .tbl .model{font-weight:700;color:#eef1fb}
+  .tbl td .pill{font-size:10.5px;color:#c7d2fe;background:rgba(99,102,241,.16);padding:2px 7px;border-radius:6px;margin-left:7px}
+  .note{font-size:12.5px;color:#8b93b0;margin-top:14px;line-height:1.6}
+  .note b{color:#aab2cc}
+
+  /* ===== architecture (static) ===== */
+  .archcard{padding:16px;margin-top:24px;position:relative}
+  .archcard img{width:100%;height:auto;border-radius:12px;display:block}
+  .archcard .overlay{position:absolute;left:26px;bottom:26px;right:26px;display:flex;
+    justify-content:space-between;align-items:flex-end;gap:16px;pointer-events:none}
+  .archcard .badge{pointer-events:auto;font-size:12px;font-weight:700;color:#cdd4ea;
+    background:rgba(8,10,20,.6);border:1px solid rgba(255,255,255,.12);padding:8px 13px;border-radius:11px;
+    backdrop-filter:blur(8px)}
+  .legend{display:flex;flex-wrap:wrap;gap:14px 22px;margin-top:18px;font-size:13px;color:#cdd4ea}
+  .legend .row{display:flex;align-items:center;gap:9px}
+  .legend .dot{width:13px;height:13px;border-radius:5px;box-shadow:0 0 10px currentColor}
+  .archcta{margin-top:20px;display:flex;gap:12px;flex-wrap:wrap}
+
+  footer{padding:48px 0 64px;text-align:center;color:#6b7488;font-size:13px;border-top:1px solid rgba(255,255,255,.07);margin-top:30px}
+  footer a{font-weight:600}
+
+  @media (max-width:760px){
+    .stats{grid-template-columns:1fr 1fr}
+    .figs{grid-template-columns:1fr}
+    .archcard .overlay{display:none}
+    .tbl{font-size:13px}
+    .tbl th,.tbl td{padding:10px 9px}
+  }
 </style>
 </head>
 <body>
-  <div class="c">
-    <div>Loading the interactive 3D architecture…</div>
-    <div>If it doesn't open, <a href="architecture_3d.html">click here</a>.</div>
+
+<header>
+  <div class="wrap">
+    <span class="tag">HYBRID 3D TUMOUR SEGMENTATION · RECIST RESPONSE</span>
+    <h1>OncoSeg</h1>
+    <p class="sub">A Swin-Transformer encoder × CNN decoder, joined by cross-attention skips —
+      for 3D brain-tumour segmentation and automated treatment-response assessment.</p>
+    <div class="flow">› <b>Transformer</b> sees globally &nbsp;·&nbsp; <b>CNN</b> rebuilds locally &nbsp;·&nbsp; <b>cross-attention</b> bridges them</div>
+    <div class="cta">
+      <a class="btn primary" href="#results">See the results ↓</a>
+      <a class="btn" href="architecture_3d.html">Interactive 3D model →</a>
+      <a class="btn" href="https://github.com/youseihuayu-wonderful/OncoSeg-3D-Multi-Scale-Tumor-Segmentation-for-Automated-Treatment-Response-Assessment">GitHub repo</a>
+    </div>
   </div>
-  <script>location.replace('architecture_3d.html');</script>
+</header>
+
+<!-- ============================= RESULTS FIRST ============================= -->
+<section id="results">
+  <div class="wrap">
+    <div class="eyebrow">Validated results</div>
+    <h2>What it achieves</h2>
+    <p class="lead">Trained and evaluated on the <b>MSD Brain Tumour</b> task (388 train / 96 validation subjects,
+      50 epochs, multi-label TC/WT/ET). Every number below is measured on held-out validation — nothing is simulated.</p>
+
+    <div class="stats">
+      <div class="stat glass"><div class="v" style="color:#a5b4fc">0.797</div><div class="k">Mean Dice</div><div class="s">across TC · WT · ET</div></div>
+      <div class="stat glass"><div class="v" style="color:#5eead4">5.2×</div><div class="k">Fewer parameters</div><div class="s">3.7M vs UNet3D 19.2M</div></div>
+      <div class="stat glass"><div class="v" style="color:#fcd34d">15.4<span style="font-size:16px"> mm</span></div><div class="k">HD95 boundary error</div><div class="s">vs 21.0 mm for UNet3D</div></div>
+      <div class="stat glass"><div class="v" style="color:#fda4af">0.010</div><div class="k">Calibration (ECE)</div><div class="s">MC-Dropout uncertainty</div></div>
+    </div>
+
+    <div class="figs">
+      <figure class="figcard glass">
+        <img src="assets/dice_comparison.png" alt="Per-region Dice score: OncoSeg vs UNet3D on 96 validation subjects" />
+        <figcaption><b>Per-region Dice.</b> OncoSeg matches or beats UNet3D on Tumour Core, Whole Tumour
+          and Enhancing Tumour — with <b>~5× fewer parameters</b>.</figcaption>
+      </figure>
+      <figure class="figcard glass">
+        <img src="assets/training_curves.png" alt="OncoSeg training and validation curves over 50 epochs" />
+        <figcaption><b>Training dynamics.</b> Loss and validation Dice over 50 epochs — stable convergence,
+          best mean Dice 0.797 at epoch 50.</figcaption>
+      </figure>
+    </div>
+
+    <table class="tbl glass">
+      <thead>
+        <tr><th>Model</th><th>Dice TC</th><th>Dice WT</th><th>Dice ET</th><th>Dice mean</th><th>HD95 mean ↓</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="model">OncoSeg <span class="pill">3.7M params</span></td>
+          <td class="win">0.7898</td><td class="win">0.8529</td><td class="win">0.7481</td>
+          <td class="win">0.7969</td><td class="win">15.35 mm</td>
+        </tr>
+        <tr>
+          <td class="model">UNet3D <span class="pill">19.2M params</span></td>
+          <td>0.7849</td><td>0.8522</td><td>0.7462</td><td>0.7944</td><td>21.03 mm</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="note">Higher Dice is better; lower HD95 (95th-percentile Hausdorff distance) is better. OncoSeg edges
+      UNet3D on every region while cutting boundary error by <b>~27%</b> at a fraction of the parameters.
+      Additional SwinUNETR / UNETR baselines and the cross-attention ablation run via the Kaggle notebook and
+      will be added when complete.</p>
+  </div>
+</section>
+
+<!-- ====================== ARCHITECTURE (STATIC IMAGE) ====================== -->
+<section id="architecture">
+  <div class="wrap">
+    <div class="eyebrow">How it works</div>
+    <h2>The architecture</h2>
+    <p class="lead">An asymmetric hybrid U-shape: a <b>Swin-Transformer encoder</b> builds global context as it
+      downsamples, a <b>CNN decoder</b> rebuilds pixel-precise boundaries, and <b>cross-attention skips</b> let the
+      decoder query exactly the encoder evidence it needs — rather than a blind concatenation.</p>
+
+    <div class="archcard glass">
+      <img src="architecture_3d_hero.png" alt="OncoSeg architecture — Swin encoder, CNN decoder, cross-attention skips, bottleneck" />
+      <div class="overlay">
+        <span class="badge">Static render — open the interactive view to rotate &amp; explore</span>
+        <a class="badge" href="architecture_3d.html" style="color:#c7d2fe">Interactive 3D →</a>
+      </div>
+    </div>
+
+    <div class="legend">
+      <div class="row"><span class="dot" style="background:#6366f1;color:#6366f1"></span>Swin Transformer encoder (global, ↓)</div>
+      <div class="row"><span class="dot" style="background:#14b8a6;color:#14b8a6"></span>CNN decoder (local detail, ↑)</div>
+      <div class="row"><span class="dot" style="background:#f59e0b;color:#f59e0b"></span>Cross-attention skip</div>
+      <div class="row"><span class="dot" style="background:#a855f7;color:#a855f7"></span>Bottleneck</div>
+      <div class="row"><span class="dot" style="background:#f43f5e;color:#f43f5e"></span>Output / RECIST head</div>
+    </div>
+
+    <div class="archcta">
+      <a class="btn primary" href="architecture_3d.html">Open interactive 3D model →</a>
+      <a class="btn" href="architecture_3d.html#intuition">Why each module</a>
+      <a class="btn" href="architecture_3d.html#deep">Deep dive: cross-attention</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    OncoSeg · 3D multi-scale tumour segmentation for automated treatment-response assessment ·
+    <a href="https://github.com/youseihuayu-wonderful/OncoSeg-3D-Multi-Scale-Tumor-Segmentation-for-Automated-Treatment-Response-Assessment">source on GitHub</a>
+  </div>
+</footer>
+
 </body>
 </html>
