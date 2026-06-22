@@ -177,6 +177,34 @@
   .mod .no{color:#d4b8bf}
   .mod .no .lbl{background:rgba(244,63,94,.22);color:#fda4af}
   .mod .no b{color:#ffd9df}
+
+  /* ===== preview "poster" composition (?poster=1) ===========================
+     A self-contained banner for the README: an info column pinned to the left
+     (title · result stats · legend) with the 3D model offset into the right
+     ~60% of the frame, so text and model never overlap. */
+  #poster{display:none}
+  body.poster #poster{
+    display:flex;flex-direction:column;justify-content:center;gap:17px;
+    position:absolute;left:0;top:0;bottom:0;width:42%;min-width:340px;max-width:470px;
+    padding:0 28px 0 46px;z-index:40;pointer-events:none;
+    background:linear-gradient(100deg, rgba(5,6,13,.94) 62%, rgba(5,6,13,0));
+  }
+  #poster .tag{align-self:flex-start;font-size:10.5px;font-weight:800;letter-spacing:.13em;
+    color:#c7d2fe;background:rgba(99,102,241,.18);border:1px solid rgba(99,102,241,.45);
+    padding:4px 11px;border-radius:999px}
+  #poster h1{font-size:54px;font-weight:800;letter-spacing:-.03em;line-height:1;
+    background:linear-gradient(100deg,#a5b4fc,#e9d5ff 45%,#5eead4);
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  #poster .psub{font-size:13px;color:#aab2cc;line-height:1.55;max-width:370px}
+  #poster .pstats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  #poster .pstat{padding:12px 14px;border-radius:14px;background:rgba(18,22,40,.62);
+    border:1px solid rgba(255,255,255,.10)}
+  #poster .pstat .v{font-size:25px;font-weight:800;letter-spacing:-.02em;line-height:1}
+  #poster .pstat .k{font-size:11.5px;font-weight:700;color:#dfe3f0;margin-top:6px}
+  #poster .pstat .s{font-size:10px;color:#9aa3bd;margin-top:2px}
+  #poster .pleg{display:flex;flex-direction:column;gap:7px;margin-top:2px}
+  #poster .pleg .row{display:flex;align-items:center;gap:9px;font-size:11.5px;color:#cdd4ea}
+  #poster .pleg .dot{width:11px;height:11px;border-radius:4px;box-shadow:0 0 9px currentColor}
 </style>
 </head>
 <body>
@@ -533,6 +561,27 @@ x = self.conv(x)</pre>
 
 <div id="tip" class="glass"></div>
 
+<!-- preview-only info column (shown with ?poster=1, used to render the README GIF) -->
+<div id="poster">
+  <span class="tag">HYBRID 3D TUMOUR SEGMENTATION · RECIST</span>
+  <h1>OncoSeg</h1>
+  <p class="psub">Swin-Transformer encoder × CNN decoder, joined by cross-attention skips —
+    for 3D tumour segmentation &amp; automated treatment-response (RECIST) assessment.</p>
+  <div class="pstats">
+    <div class="pstat"><div class="v" style="color:#a5b4fc">0.797</div><div class="k">Mean Dice</div><div class="s">TC · WT · ET</div></div>
+    <div class="pstat"><div class="v" style="color:#5eead4">5.2×</div><div class="k">Fewer params</div><div class="s">vs UNet3D</div></div>
+    <div class="pstat"><div class="v" style="color:#fcd34d">15.4<span style="font-size:14px"> mm</span></div><div class="k">HD95 ↓</div><div class="s">vs 21.0 mm</div></div>
+    <div class="pstat"><div class="v" style="color:#fda4af">0.010</div><div class="k">ECE</div><div class="s">MC-Dropout</div></div>
+  </div>
+  <div class="pleg">
+    <div class="row"><span class="dot" style="background:#6366f1;color:#6366f1"></span>Swin Transformer encoder (global, ↓)</div>
+    <div class="row"><span class="dot" style="background:#14b8a6;color:#14b8a6"></span>CNN decoder (local detail, ↑)</div>
+    <div class="row"><span class="dot" style="background:#f59e0b;color:#f59e0b"></span>Cross-attention skip</div>
+    <div class="row"><span class="dot" style="background:#a855f7;color:#a855f7"></span>Bottleneck</div>
+    <div class="row"><span class="dot" style="background:#f43f5e;color:#f43f5e"></span>Output / RECIST head</div>
+  </div>
+</div>
+
 <script type="importmap">
 {
   "imports": {
@@ -618,11 +667,18 @@ controls.autoRotateSpeed = 0.35;   // calmer live rotation
 // rendered headlessly are deterministic and seam-free for the looping GIF.
 // &ui=0 hides every overlay panel, leaving a clean model render for a still.
 const _sp = new URLSearchParams(location.search);
-const PREVIEW = _sp.has('az');
-const SHOW_UI = _sp.get('ui') !== '0';
+// poster mode = the README banner: left info column + model offset to the right.
+const POSTER = _sp.get('poster') === '1';
+const PREVIEW = _sp.has('az') || POSTER;
+const SHOW_UI = _sp.get('ui') !== '0' && !POSTER;
+if (POSTER) {
+  document.body.classList.add('poster');
+  // aim left of the model so it renders in the right ~60%, clear of the column.
+  controls.target.x = -4.0;
+}
 if (PREVIEW) {
   controls.autoRotate = false;
-  const az = parseFloat(_sp.get('az')) * Math.PI / 180;
+  const az = parseFloat(_sp.get('az') || '0') * Math.PI / 180;
   const R = 23.7, H = 6.5;
   camera.position.set(Math.sin(az) * R, H, Math.cos(az) * R);
   camera.lookAt(controls.target);

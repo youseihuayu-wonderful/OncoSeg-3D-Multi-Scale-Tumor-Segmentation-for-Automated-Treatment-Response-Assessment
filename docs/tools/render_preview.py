@@ -4,13 +4,14 @@
 Drives ``docs/architecture_3d.html`` headlessly (system Google Chrome via
 Playwright) and produces two committed artefacts:
 
-* ``docs/architecture_3d_preview.gif`` — a slow, smooth, seamless loop of the
-  model. Frames are captured in *preview mode* (``?az=<deg>&ui=0``), which
-  freezes auto-rotation/flow/pulse and hides every HUD overlay, so the model
-  is centred and nothing overlaps. The default motion is a gentle ±38°
+* ``docs/architecture_3d_preview.gif`` — the README banner. Captured in
+  *poster mode* (``?poster=1&az=<deg>``): a left info column (title · result
+  stats · legend) with the 3D model offset into the right ~60% of a wide 2:1
+  frame, so text and model never overlap. The motion is a gentle ±38°
   sinusoidal *wobble* around the front (``--spin`` forces a full 360°): a full
   turn would put the model edge-on, where the encoder and decoder labels
-  collide — the wobble keeps both columns horizontally separated and legible.
+  collide — the wobble keeps both columns separated and legible. ``--no-poster``
+  falls back to just the centred ``&ui=0`` model.
 * ``docs/architecture_3d_hero.png`` — a clean static still of the model
   (``&ui=0`` hides every overlay) used as the architecture image on the
   GitHub Pages landing page.
@@ -43,6 +44,7 @@ from playwright.sync_api import sync_playwright
 
 DOCS_DIR = Path(__file__).resolve().parent.parent
 PAGE = "architecture_3d.html"
+POSTER_CAP = (1000, 500)  # capture viewport for the wide poster banner (2:1)
 
 
 def _serve(directory: Path) -> tuple[socketserver.TCPServer, int]:
@@ -67,7 +69,7 @@ def _grab(page, url: str, width: int, height: int) -> bytes:
 
 def render(*, gif: bool, hero: bool, frames: int, delay_ms: int, colors: int,
            width: int, height: int, hero_az: int, gif_width: int,
-           spin: bool, sweep_deg: float) -> None:
+           spin: bool, sweep_deg: float, poster: bool) -> None:
     httpd, port = _serve(DOCS_DIR)
     base = f"http://127.0.0.1:{port}/{PAGE}"
     try:
@@ -84,13 +86,17 @@ def render(*, gif: bool, hero: bool, frames: int, delay_ms: int, colors: int,
                           f"({len(png)//1024} KB, {width}x{height}@2x)")
 
                 if gif:
+                    # poster (default): the README banner — left info column
+                    # (title · result stats · legend) + model offset right, wide
+                    # 2:1 frame. plain (--no-poster): just the centred ui=0 model.
+                    cap_w, cap_h = POSTER_CAP if poster else (width, height)
                     gw = gif_width
-                    gh = round(height * gw / width)
+                    gh = round(cap_h * gw / cap_w)
                     # Azimuth schedule (seamless loop):
                     #  * sweep (default): a gentle sinusoidal wobble in ±sweep_deg
                     #    around the front. Both encoder/decoder columns stay
                     #    horizontally separated, so the 3D labels never collide —
-                    #    the model reads cleanly and stays centred/balanced.
+                    #    the model reads cleanly and nothing overlaps.
                     #  * spin: a full 360° turn (labels overlap edge-on; opt-in).
                     if spin:
                         azimuths = [i * 360 / frames for i in range(frames)]
@@ -102,9 +108,9 @@ def render(*, gif: bool, hero: bool, frames: int, delay_ms: int, colors: int,
                     imgs: list[Image.Image] = []
                     for i, az in enumerate(azimuths):
                         az = round(az, 3)
-                        # ui=0 → only the centred 3D model (no HUD overlays), so
-                        # the looping preview is balanced and free of overlap.
-                        png = _grab(page, f"{base}?az={az}&ui=0", width, height)
+                        url = (f"{base}?poster=1&az={az}" if poster
+                               else f"{base}?az={az}&ui=0")
+                        png = _grab(page, url, cap_w, cap_h)
                         import io
                         im = Image.open(io.BytesIO(png)).convert("RGB")
                         # frames captured @2x for AA, downscaled for a small GIF
@@ -139,7 +145,7 @@ def main() -> None:
     ap.add_argument("--width", type=int, default=900)
     ap.add_argument("--height", type=int, default=506)
     ap.add_argument("--hero-az", type=int, default=28)
-    ap.add_argument("--gif-width", type=int, default=620,
+    ap.add_argument("--gif-width", type=int, default=760,
                     help="GIF is downscaled to this width (frames captured @2x)")
     ap.add_argument("--colors", type=int, default=64, help="GIF palette size")
     ap.add_argument("--spin", action="store_true",
@@ -148,6 +154,9 @@ def main() -> None:
     ap.add_argument("--sweep-deg", type=float, default=38.0,
                     help="amplitude of the wobble; kept <~40° so the encoder/"
                          "decoder labels never collide")
+    ap.add_argument("--no-poster", dest="poster", action="store_false",
+                    help="GIF shows just the centred model (no info column)")
+    ap.set_defaults(poster=True)
     args = ap.parse_args()
     # Default (neither flag) renders both.
     do_gif = args.gif or not (args.gif or args.hero)
@@ -155,7 +164,7 @@ def main() -> None:
     render(gif=do_gif, hero=do_hero, frames=args.frames, delay_ms=args.delay_ms,
            width=args.width, height=args.height, hero_az=args.hero_az,
            gif_width=args.gif_width, colors=args.colors,
-           spin=args.spin, sweep_deg=args.sweep_deg)
+           spin=args.spin, sweep_deg=args.sweep_deg, poster=args.poster)
 
 
 if __name__ == "__main__":
