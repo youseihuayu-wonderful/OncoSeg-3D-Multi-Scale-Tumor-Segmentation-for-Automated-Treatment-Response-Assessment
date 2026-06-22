@@ -102,10 +102,10 @@
   #tabs .tab:hover{color:#fff}
   #tabs .tab.active{background:linear-gradient(100deg,#4f46e5,#7c3aed);color:#fff;box-shadow:0 8px 20px -8px #4f46e5}
 
-  /* ===== deep-dive view ===== */
-  #deepdive{position:fixed;inset:0;z-index:25;overflow-y:auto;display:none;
+  /* ===== overlay views (deep-dive + intuition) ===== */
+  #deepdive,#intuition{position:fixed;inset:0;z-index:25;overflow-y:auto;display:none;
     background:radial-gradient(1100px 560px at 50% -8%, rgba(40,46,90,.55), transparent), #070912}
-  #deepdive.show{display:block}
+  #deepdive.show,#intuition.show{display:block}
   .dd-wrap{max-width:1000px;margin:0 auto;padding:88px 28px 90px}
   .dd-h1{font-size:31px;font-weight:800;letter-spacing:-.02em;line-height:1.1;
     background:linear-gradient(100deg,#a5b4fc,#e9d5ff 50%,#5eead4);-webkit-background-clip:text;background-clip:text;color:transparent}
@@ -153,6 +153,30 @@
     font-size:12.5px;color:#ecdcc0;margin:14px 0;line-height:1.6}
   .callout b{color:#fcd34d}
   .dd-foot{font-size:11px;color:#6b7488;margin-top:34px;border-top:1px solid rgba(255,255,255,.07);padding-top:16px;line-height:1.6}
+
+  /* ===== module-by-module cards (intuition view) ===== */
+  .grouphdr{font-size:11.5px;font-weight:800;letter-spacing:.10em;text-transform:uppercase;color:#8b93b0;
+    margin:30px 0 6px;display:flex;align-items:center;gap:12px}
+  .grouphdr::after{content:"";flex:1;height:1px;background:rgba(255,255,255,.09)}
+  .grouphdr .gi{font-size:13px}
+  .mod{display:flex;margin:11px 0;border-radius:15px;overflow:hidden;
+    background:rgba(18,22,40,.6);border:1px solid rgba(255,255,255,.09)}
+  .mod .accent{width:6px;flex:none}
+  .mod .inner{padding:15px 20px;flex:1;min-width:0}
+  .mod .top{display:flex;align-items:center;gap:11px;flex-wrap:wrap;margin-bottom:8px}
+  .mod .name{font-size:15px;font-weight:800;color:#eef1fb}
+  .mod .tag{font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#a5b4fc;
+    background:rgba(99,102,241,.14);padding:2px 8px;border-radius:6px}
+  .mod .kind{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-left:auto;color:#7c87a6}
+  .mod .pm,.mod .wy,.mod .no{font-size:12.5px;line-height:1.62;margin:7px 0;color:#c4cce0}
+  .mod .pm b,.mod .wy b,.mod .no b{color:#fff}
+  .mod .lbl{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.04em;
+    padding:1px 7px;border-radius:5px;margin-right:9px}
+  .mod .pm .lbl{background:rgba(99,102,241,.24);color:#c7d2fe}
+  .mod .wy .lbl{background:rgba(20,184,166,.20);color:#5eead4}
+  .mod .no{color:#d4b8bf}
+  .mod .no .lbl{background:rgba(244,63,94,.22);color:#fda4af}
+  .mod .no b{color:#ffd9df}
 </style>
 </head>
 <body>
@@ -161,6 +185,7 @@
 
 <div id="tabs" class="glass">
   <div class="tab active" data-view="3d">3D Architecture</div>
+  <div class="tab" data-view="intuition">Why Each Module</div>
   <div class="tab" data-view="deep">Deep Dive: Cross-Attention</div>
 </div>
 
@@ -385,6 +410,124 @@ x = self.conv(x)</pre>
       <h4><span class="b" style="background:#f43f5e;color:#f43f5e"></span>Heads: deep-sup · MC-dropout · RECIST<span class="why-q">output</span></h4>
       <p><b>Deep supervision</b> adds gradient signal to decoder stages during training; <b>MC-Dropout</b> turns one model into an uncertainty estimator (ECE 0.010); the mask drives <b>RECIST → CR/PR/SD/PD</b>.</p>
     </div>
+  </div>
+</div>
+
+<div id="intuition">
+  <div class="dd-wrap">
+    <div class="dd-h1">Why each module — the physical meaning</div>
+    <p class="dd-lead">The whole network imitates how a radiologist reads a scan: <b>first understand</b> the image from local detail up to the
+      whole lesion (encode), <b>then paint</b> that understanding back into a precise per-voxel mask (decode), <b>looking back</b> at the
+      original detail along the way (skips). Here is what every block physically <i>means</i>, and why it is built that way.</p>
+
+    <!-- INPUT -->
+    <div class="grouphdr"><span class="gi">🩻</span> Input — give the model the evidence</div>
+
+    <div class="mod"><div class="accent" style="background:#64748b"></div><div class="inner">
+      <div class="top"><span class="name">4-modal MRI</span><span class="tag">[1, 4, 128³]</span><span class="kind">input</span></div>
+      <div class="pm"><span class="lbl">PHYSICAL</span>Four MRI sequences are four <b>filters on the same brain</b>: T1c lights up <b>enhancing tumor</b> (broken blood–brain barrier), T2/FLAIR light up <b>edema</b>, and so on. Stacked as 4 channels, the model sees the anatomy from four angles at once.</div>
+      <div class="wy"><span class="lbl">WHY</span>A single sequence is ambiguous; cross-referencing all four is how a radiologist tells tumor from vessel from swelling. Channels are the cheapest way to fuse them from layer one.</div>
+      <div class="no"><span class="lbl">WITHOUT IT</span>With one sequence, enhancing tumor and edema look alike — the model confuses tissue types and mislabels region boundaries.</div>
+    </div></div>
+
+    <div class="mod"><div class="accent" style="background:#8b95e6"></div><div class="inner">
+      <div class="top"><span class="name">Patch Embed (4×4×4)</span><span class="tag">↓4 → [1, 48, 32³]</span><span class="kind">stem</span></div>
+      <div class="pm"><span class="lbl">PHYSICAL</span>Chop the volume into little <b>4×4×4 sugar cubes</b> and summarise each cube into one feature vector — a "super-voxel" digest of the raw scan.</div>
+      <div class="wy"><span class="lbl">WHY</span>Running attention on 128³ raw voxels is impossibly expensive. Downsampling ×4 first makes everything downstream tractable while keeping local texture.</div>
+      <div class="no"><span class="lbl">WITHOUT IT</span>Attention would run on millions of raw voxels — memory explodes and the model simply won't fit on a GPU.</div>
+    </div></div>
+
+    <!-- ENCODER -->
+    <div class="grouphdr"><span class="gi">🧠</span> Swin encoder — understand: look wider, abstract more</div>
+
+    <div class="mod"><div class="accent" style="background:#6366f1"></div><div class="inner">
+      <div class="top"><span class="name">Window + shifted-window self-attention</span><span class="kind">encoder</span></div>
+      <div class="pm"><span class="lbl">PHYSICAL</span>Deciding "is this voxel tumor?" depends on <b>far-away anatomy</b>. Self-attention lets each location look around globally; the <b>window</b> limits looking to a neighbourhood, and the next layer <b>shifts</b> the windows so neighbourhoods exchange news.</div>
+      <div class="wy"><span class="lbl">WHY</span>Full 3D global attention would blow up memory. Windowing + shifting is "affordable global vision" — most of the context, a fraction of the cost.</div>
+      <div class="no"><span class="lbl">WITHOUT IT</span>Plain global 3D attention is O(N²) over millions of voxels — infeasible. Drop attention for pure convs and you lose the long-range context that tells tumor from look-alike.</div>
+    </div></div>
+
+    <div class="mod"><div class="accent" style="background:#6366f1"></div><div class="inner">
+      <div class="top"><span class="name">4 hierarchical stages (↓ space, ↑ channels)</span><span class="tag">48→96→192→384</span><span class="kind">encoder</span></div>
+      <div class="pm"><span class="lbl">PHYSICAL</span>Each stage <b>steps back to see more</b>: half the resolution, double the semantic vocabulary. Shallow stages read <b>edges/texture</b>; deep stages read <b>whole-lesion structure</b> — like zooming from "a grey speck" out to "a mass with surrounding edema".</div>
+      <div class="wy"><span class="lbl">WHY</span>Segmentation needs features at <b>many scales</b>. A hierarchy hands the decoder a ready-made multi-scale pyramid to reconstruct from.</div>
+      <div class="no"><span class="lbl">WITHOUT IT</span>A single-scale encoder gives the decoder nothing to fuse — coarse masks that handle neither tiny enhancing foci nor large whole-tumor extent well.</div>
+    </div></div>
+
+    <!-- BOTTLENECK -->
+    <div class="grouphdr"><span class="gi">🎯</span> Bottleneck — the most compressed judgement</div>
+
+    <div class="mod"><div class="accent" style="background:#a855f7"></div><div class="inner">
+      <div class="top"><span class="name">Swin Stage 4 — bottleneck</span><span class="tag">[1, 384, 4³]</span><span class="kind">bottleneck</span></div>
+      <div class="pm"><span class="lbl">PHYSICAL</span>The whole scan squeezed into a tiny, maximally <b>semantic</b> blob — "<b>what</b> the tumor is and roughly <b>where</b>", with almost no precise outline left. The model's highest-level understanding.</div>
+      <div class="wy"><span class="lbl">WHY</span>It is the information-dense pivot of the U. Because it is the most meaningful representation, it is also where uncertainty (MC-Dropout) and longitudinal change are best measured.</div>
+      <div class="no"><span class="lbl">WITHOUT IT</span>No compressed global representation means the network never forms a holistic "what & where" — segmentation stays locally myopic and inconsistent across the lesion.</div>
+    </div></div>
+
+    <div class="mod"><div class="accent" style="background:#a855f7"></div><div class="inner">
+      <div class="top"><span class="name">Temporal attention (optional)</span><span class="kind">bottleneck</span></div>
+      <div class="pm"><span class="lbl">PHYSICAL</span>At this abstract level, align <b>baseline ↔ follow-up</b> scans and read off <b>what changed</b> — did the tumor grow or shrink?</div>
+      <div class="wy"><span class="lbl">WHY</span>Change should be judged in the <b>understanding space</b>, not by subtracting pixels (too noisy). Same backbone, now supporting longitudinal response tracking.</div>
+      <div class="no"><span class="lbl">WITHOUT IT</span>Each scan is judged in isolation — response has to be inferred afterward from noisy raw-pixel differences, which drift with registration error and intensity shifts.</div>
+    </div></div>
+
+    <!-- DECODER -->
+    <div class="grouphdr"><span class="gi">🖌️</span> CNN decoder — localize: paint precise boundaries</div>
+
+    <div class="mod"><div class="accent" style="background:#14b8a6"></div><div class="inner">
+      <div class="top"><span class="name">Transposed-conv upsampling blocks</span><span class="tag">↑2 each · 192→96→48</span><span class="kind">decoder</span></div>
+      <div class="pm"><span class="lbl">PHYSICAL</span>The bottleneck knows "there is a tumor" but the edges are blurry. Each block <b>enlarges and re-inks the outline</b>, recovering detail one level at a time.</div>
+      <div class="wy"><span class="lbl">WHY</span>Convolution is built for <b>local, smooth, continuous boundaries</b> and is memory-cheap at high resolution — attention here would explode (tokens = H·W·D). Right tool for dense reconstruction.</div>
+      <div class="no"><span class="lbl">WITHOUT IT</span>No path back to full resolution — the output is stuck at the 1/32-size bottleneck grid, with no per-voxel mask to show.</div>
+    </div></div>
+
+    <div class="mod"><div class="accent" style="background:#f59e0b"></div><div class="inner">
+      <div class="top"><span class="name">Cross-attention skip</span><span class="kind">encoder ↔ decoder</span></div>
+      <div class="pm"><span class="lbl">PHYSICAL</span>While re-inking, the decoder <b>looks back at the original scan</b> and asks "remind me of the sharp detail here" — but it <b>retrieves selectively</b>, pulling only the relevant encoder evidence, not the whole map.</div>
+      <div class="wy"><span class="lbl">WHY</span>It bridges abstract understanding (Swin) with precise geometry (CNN) — the semantic gap a plain concat skip can't close. (See the <b>Deep Dive</b> tab for the hand-worked example.)</div>
+      <div class="no"><span class="lbl">WITHOUT IT</span>Falls back to concat/add (the <code>no_xattn</code> ablation): mismatched encoder/decoder features inject noise, boundaries blur, and Dice measurably drops.</div>
+    </div></div>
+
+    <!-- HEADS -->
+    <div class="grouphdr"><span class="gi">⚕️</span> Heads — supervise, quantify uncertainty, decide</div>
+
+    <div class="mod"><div class="accent" style="background:#6366f1"></div><div class="inner">
+      <div class="top"><span class="name">Deep supervision</span><span class="kind">training</span></div>
+      <div class="pm"><span class="lbl">PHYSICAL</span>Grade the work at <b>every zoom level</b>, not just the final mask — a segmentation head on multiple decoder scales.</div>
+      <div class="wy"><span class="lbl">WHY</span>Feeds gradient directly into intermediate layers so deep stages don't drift; faster, more stable convergence.</div>
+      <div class="no"><span class="lbl">WITHOUT IT</span>Only the final layer gets a direct training signal — deep stages learn slower and can drift, giving weaker intermediate features and shakier convergence.</div>
+    </div></div>
+
+    <div class="mod"><div class="accent" style="background:#f43f5e"></div><div class="inner">
+      <div class="top"><span class="name">MC Dropout</span><span class="kind">inference</span></div>
+      <div class="pm"><span class="lbl">PHYSICAL</span>Make the model <b>"think it through N times"</b> with neurons randomly dropped each pass. The more the predictions <b>disagree, the less sure</b> it is — usually most uncertain at tumor margins.</div>
+      <div class="wy"><span class="lbl">WHY</span>Turns one model into one that <b>flags where it is unsure</b> for human review. Calibrated here to ECE 0.010 — the doubt is trustworthy.</div>
+      <div class="no"><span class="lbl">WITHOUT IT</span>A single point prediction with no confidence — the model fails silently at ambiguous margins, and nothing tells a clinician where to double-check.</div>
+    </div></div>
+
+    <div class="mod"><div class="accent" style="background:#f43f5e"></div><div class="inner">
+      <div class="top"><span class="name">Output: 3× sigmoid (TC / WT / ET)</span><span class="tag">[1, 3, 128³]</span><span class="kind">output</span></div>
+      <div class="pm"><span class="lbl">PHYSICAL</span>The BraTS tumor is three <b>nested</b> sub-regions (enhancing ⊂ core ⊂ whole). One voxel can belong to <b>several at once</b>, so each region is an independent yes/no.</div>
+      <div class="wy"><span class="lbl">WHY</span><b>Sigmoid (multi-label), not softmax</b> — softmax forces mutually-exclusive classes, which would be clinically wrong for nested regions.</div>
+      <div class="no"><span class="lbl">WITHOUT IT</span>Use softmax and a voxel can't be both ET and TC at once — the nested-region structure is broken and the labels become clinically invalid.</div>
+    </div></div>
+
+    <div class="mod"><div class="accent" style="background:#a855f7"></div><div class="inner">
+      <div class="top"><span class="name">RECIST → response (CR / PR / SD / PD)</span><span class="kind">clinical</span></div>
+      <div class="pm"><span class="lbl">PHYSICAL</span>Measure the tumor, compare to the prior scan, and classify treatment response — complete / partial response, stable, or progression.</div>
+      <div class="wy"><span class="lbl">WHY</span>Turns a segmentation mask into a <b>decision a clinician can act on</b> — the endpoint that makes the whole pipeline useful.</div>
+      <div class="no"><span class="lbl">WITHOUT IT</span>You produce a mask but no decision — the pipeline stops one step short of anything a trial workflow can actually use.</div>
+    </div></div>
+
+    <div class="callout" style="margin-top:24px">
+      <b>So why "U-shape + asymmetric hybrid"?</b> The left arm <b>understands</b> → needs global view → Transformer.
+      The right arm <b>localizes</b> → needs sharp boundaries → CNN. The skips return the detail lost while understanding, and
+      cross-attention makes that return <b>on-demand</b> rather than a blind concat. Understanding and localizing are different jobs,
+      so the network uses the right tool on each side — that is the core trade-off of the design.
+    </div>
+
+    <div class="dd-foot">Module shapes for input <code>[1, 4, 128³]</code>; see the <b>Deep Dive</b> tab for the full shape trace and the
+      cross-attention worked example, or the <b>3D Architecture</b> tab to see these modules in space.</div>
   </div>
 </div>
 
@@ -670,18 +813,23 @@ why.querySelectorAll('.sec').forEach(s=>{
 // ---- tab switching: 3D view  <->  deep-dive --------------------------------
 const tabsEl = document.getElementById('tabs');
 const deepEl = document.getElementById('deepdive');
+const intuEl = document.getElementById('intuition');
 let activeView = '3d';
 function setView(v){
   activeView = v;
   tabsEl.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.view===v));
   deepEl.classList.toggle('show', v==='deep');
-  // hide 3D-only overlays while reading the deep dive
+  intuEl.classList.toggle('show', v==='intuition');
+  // hide 3D-only overlays while reading a text view
+  const overlay = (v !== '3d');
   for (const id of ['title','stats','why','legend','controls'])
-    document.getElementById(id).style.display = (v==='deep') ? 'none' : '';
+    document.getElementById(id).style.display = overlay ? 'none' : '';
   if (v==='deep') deepEl.scrollTop = 0;
+  if (v==='intuition') intuEl.scrollTop = 0;
 }
 tabsEl.querySelectorAll('.tab').forEach(t=>t.addEventListener('click', ()=>setView(t.dataset.view)));
-if (location.hash === '#deep') setView('deep');   // deep-linkable
+if (location.hash === '#deep') setView('deep');           // deep-linkable
+else if (location.hash === '#intuition') setView('intuition');
 
 // ---- resize ----------------------------------------------------------------
 addEventListener('resize', ()=>{
