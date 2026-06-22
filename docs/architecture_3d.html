@@ -613,6 +613,16 @@ controls.target.set(0, 0.5, 0);
 controls.autoRotate = true;
 controls.autoRotateSpeed = 0.7;
 
+// ?az=<deg> pins the camera to a fixed azimuth (used to render preview frames)
+const _sp = new URLSearchParams(location.search);
+if (_sp.has('az')) {
+  controls.autoRotate = false;
+  const az = parseFloat(_sp.get('az')) * Math.PI / 180;
+  const R = 23.7, H = 6.5;
+  camera.position.set(Math.sin(az) * R, H, Math.cos(az) * R);
+  camera.lookAt(controls.target);
+}
+
 // ---- lights ----------------------------------------------------------------
 scene.add(new THREE.AmbientLight(0x8090c0, 0.55));
 const key = new THREE.DirectionalLight(0xffffff, 1.5); key.position.set(8,14,12); scene.add(key);

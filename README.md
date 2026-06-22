@@ -10,7 +10,9 @@
 
 ### 🧬 [**▶ Explore the interactive 3D architecture →**](https://youseihuayu-wonderful.github.io/OncoSeg-3D-Multi-Scale-Tumor-Segmentation-for-Automated-Treatment-Response-Assessment/)
 
-A live, rotatable 3D model of the network with three views: **3D Architecture**, **Why Each Module** (per-module physical meaning), and a **Deep Dive** into the cross-attention skip with a hand-worked example.
+[![OncoSeg interactive 3D architecture](docs/architecture_3d_preview.gif)](https://youseihuayu-wonderful.github.io/OncoSeg-3D-Multi-Scale-Tumor-Segmentation-for-Automated-Treatment-Response-Assessment/)
+
+*Click the preview to open the live, rotatable model — three views: **3D Architecture**, **Why Each Module** (per-module physical meaning + what breaks without it), and a **Deep Dive** into the cross-attention skip with a hand-worked example.*
 
 ---
 
