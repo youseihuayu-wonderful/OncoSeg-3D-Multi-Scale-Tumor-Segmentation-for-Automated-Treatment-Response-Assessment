@@ -8,6 +8,10 @@
 [![Tests](https://img.shields.io/badge/tests-46%20passed-brightgreen.svg)]()
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+### 🧬 [**▶ Explore the interactive 3D architecture →**](https://youseihuayu-wonderful.github.io/OncoSeg-3D-Multi-Scale-Tumor-Segmentation-for-Automated-Treatment-Response-Assessment/)
+
+A live, rotatable 3D model of the network with three views: **3D Architecture**, **Why Each Module** (per-module physical meaning), and a **Deep Dive** into the cross-attention skip with a hand-worked example.
+
 ---
 
 ## Summary
