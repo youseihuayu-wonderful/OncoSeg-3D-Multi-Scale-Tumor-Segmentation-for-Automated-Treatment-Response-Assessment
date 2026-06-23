@@ -8,7 +8,7 @@
   "eval_dice_mean": 0.7969,
   "eval_std_tc": 0.1962,
   "eval_std_wt": 0.1263,
-  "eval_std_et": NaN,
+  "eval_std_et": 0.219,
   "eval_hd95_tc": 12.75,
   "eval_hd95_wt": 18.71,
   "eval_hd95_et": 14.59,

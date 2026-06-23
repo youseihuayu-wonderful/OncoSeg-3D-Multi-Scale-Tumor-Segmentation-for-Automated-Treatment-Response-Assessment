@@ -5,7 +5,7 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![PyTorch 2.1+](https://img.shields.io/badge/PyTorch-2.1+-ee4c2c.svg)](https://pytorch.org/)
 [![MONAI 1.3+](https://img.shields.io/badge/MONAI-1.3+-green.svg)](https://monai.io/)
-[![Tests](https://img.shields.io/badge/tests-46%20passed-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/tests-167-blue.svg)]()
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 <div align="center">
@@ -26,7 +26,7 @@ When treating cancer, doctors decide whether a treatment is working by **measuri
 
 **OncoSeg automates this end-to-end:** it segments the tumor in 3D, produces an **uncertainty map** that flags where the model is unsure, and automatically reports the standard treatment-response category (shrinking / stable / growing, per RECIST 1.1).
 
-Unlike heavier deep-learning models, OncoSeg **matches the accuracy of a standard 3D U-Net while using 5× fewer parameters** (3.7M vs 19.2M) and produces **27% more accurate tumor boundaries** (HD95 15.4 mm vs 21.0 mm), tested on 96 brain-MRI cases from the Medical Segmentation Decathlon.
+Unlike heavier deep-learning models, OncoSeg **matches the accuracy of a standard 3D U-Net while using 5× fewer parameters** (3.7M vs 19.2M), measured on 96 brain-MRI cases from the Medical Segmentation Decathlon. Boundary error (HD95) was also lower on this run (15.4 mm vs 21.0 mm), though from a single run and not significance-tested — see **Limitations** for the full set of caveats.
 
 **Next steps:** extend beyond brain to multi-organ tumors, and integrate into hospital imaging systems (PACS) so it runs inside real radiology workflows.
 
@@ -136,14 +136,12 @@ Or use section 10 of the Colab notebook for GPU training of all 4 variants.
 
 | Model | Dice TC | Dice WT | Dice ET | Dice Mean | HD95 Mean (mm) | Params |
 |-------|---------|---------|---------|-----------|----------------|--------|
-| **OncoSeg** | **0.7898** | **0.8529*** | **0.7481** | **0.7969** | **15.35** | **3.7M** |
+| **OncoSeg** | 0.7898 | 0.8529 | 0.7481 | 0.7969 | **15.35** | **3.7M** |
 | UNet3D | 0.7849 | 0.8522 | 0.7462 | 0.7944 | 21.03 | 19.2M |
 
-*\* p < 0.01 (Wilcoxon signed-rank test)*
+OncoSeg **matches** UNet3D's Dice accuracy (mean 0.7969 vs 0.7944) while using **5× fewer parameters** (3.7M vs 19.2M). The per-region Dice gaps are within noise: a paired Wilcoxon signed-rank test on per-subject Dice finds **no region where OncoSeg is significantly better**, and on WT the per-subject comparison actually favours UNet3D (it wins 67 of 96 subjects, two-sided p ≈ 0.009). OncoSeg's measurable advantage on this run is **parameter efficiency** and a **lower HD95 boundary error** (15.35 mm vs 21.03 mm) — note HD95 was computed once and is sensitive to outliers; it has **not** been significance-tested (no per-subject HD95 was saved). See **Limitations**.
 
-OncoSeg outperforms UNet3D on **all metrics** (Dice and HD95) across all 3 tumor regions while using **5x fewer parameters** (3.7M vs 19.2M). HD95 boundary error is 27% lower (15.35mm vs 21.03mm).
-
-> Trained for 50 epochs on MSD Brain Tumor (388 train / 96 val subjects, embed_dim=24, roi_size=96, Apple Silicon MPS). SwinUNETR and UNETR benchmarks require a CUDA GPU — use the Colab notebook for full benchmarking.
+> Numbers come from a **single** 50-epoch run on MSD Brain Tumor (388 train / 96 val, embed_dim=24, roi_size=96, Apple Silicon MPS) — no repeated seeds or confidence intervals, and the UNet3D baseline was truncated early by an OOM crash (see Limitations). SwinUNETR/UNETR baselines and the ablation study require a CUDA GPU and have not been run.
 
 ### Training Curves
 
@@ -157,7 +155,7 @@ OncoSeg outperforms UNet3D on **all metrics** (Dice and HD95) across all 3 tumor
 
 ![Qualitative](figures/qualitative_comparison.png)
 
-OncoSeg predictions track GT boundaries even on the median case (Dice 0.85); the worst case (Dice 0.24, BRATS_077) exhibits a small, diffuse ET region that both models under-segment — see failure-mode breakdown in `experiments/local_results/failure_analysis.json` (dominant failure region: **TC**, relative drop 79.7% on bottom-5 cases).
+OncoSeg predictions track GT boundaries even on the median case (Dice 0.85); the worst case (Dice 0.24, BRATS_077) exhibits a small, diffuse tumor that both models under-segment — see the per-case breakdown in `experiments/local_results/failure_analysis.json`. (Note: the "dominant failure region" figure previously quoted here was produced by a NaN-handling bug and has been removed pending a corrected recomputation — see Limitations.)
 
 **Worst-case root-cause analysis** (`scripts/diagnose_worst_case.py`, full writeup in `docs/Paper_Results_Draft.md` §4): BRATS_077 is a 17.7th-percentile-small tumor with TC occupying only 6.7% of WT, ~3× weaker modality contrast than the median case, and 31 fragmented WT components (vs 14). See `figures/worst_case_comparison.png`.
 
@@ -167,30 +165,25 @@ See `docs/Paper_Results_Draft.md` for the full Results section (accuracy, calibr
 
 ![Uncertainty](figures/uncertainty_map.png)
 
-Uncertainty concentrates along tumor boundaries, matching the regions of highest prediction error. The model is **well-calibrated** (ECE = 0.0101, 15-bin reliability):
+Uncertainty concentrates along tumor boundaries. **Calibration caveat:** the ECE of 0.0101 quoted in earlier versions was computed over *all* voxels, ~98% of which are background and trivially easy — it does not reflect calibration where it matters. Measured on **foreground voxels only**, the model is in fact **over-confident** (foreground ECE ≈ 0.49; voxels predicted at ~0.99 confidence are correct only ~40% of the time). The MC-Dropout estimate is also near-degenerate (5 samples, one subject, MC variance ~2.7e-6). Calibration is a **known limitation, not a strength**:
 
 ![Calibration](figures/uncertainty_calibration.png)
 ![Uncertainty vs Error](figures/uncertainty_vs_error.png)
 
-### End-to-End RECIST Longitudinal Response Assessment
+### RECIST Response Pipeline — Synthetic Sanity Check
 
 ![RECIST demo](figures/recist_demo.png)
 
-Realistic longitudinal simulation using biologically-motivated tumor evolution models applied to OncoSeg predictions:
+> **This is a synthetic demonstration, not clinical validation.** The follow-up timepoints are **not** real scans — they are generated from a single baseline (BRATS_407) by hand-tuned tumor-evolution functions with a fixed seed. The parameters are chosen so each scenario crosses a specific RECIST threshold, so the table below only confirms that the CR/PR/SD/PD classifier *wiring* behaves as designed. It does **not** measure accuracy on real longitudinal data. Validation on real scans is scripted in `scripts/evaluate_lumiere.py` but **has not yet been run** (requires the LUMIERE dataset).
 
-| Scenario | Tumor Model | Expected | Verified |
-|----------|------------|----------|----------|
+| Scenario | Synthetic tumor model | Designed category | Classifier output |
+|----------|----------------------|-------------------|-------------------|
 | Complete Response | Total elimination | CR | CR |
-| Partial Response | Exponential peripheral decay (chemo model) | PR | PR |
-| Stable Disease | Heterogeneous subclonal response | SD | SD |
-| Progressive Disease | Gompertz anisotropic growth | PD | PD |
+| Partial Response | Exponential peripheral decay | PR | PR |
+| Stable Disease | Heterogeneous subclonal | SD | SD |
+| Progressive Disease | Gompertz growth | PD | PD |
 
-Unlike simple morphological erosion/dilation, each model reflects real clinical biology:
-- **Exponential decay**: drug penetration gradient — tumor shrinks from periphery inward
-- **Gompertz growth**: saturation-limited expansion preferentially along white matter tracts
-- **Heterogeneous response**: sensitive subclone regresses while resistant clone persists
-
-Multi-timepoint monitoring (4 treatment cycles) demonstrates crossing the PR threshold as cumulative treatment effect increases. See `notebooks/recist_response_demo.ipynb`.
+See `notebooks/recist_response_demo.ipynb`. (The RECIST longest-diameter measurement itself currently uses a single axial slice and underestimates elongated lesions — see Limitations.)
 
 ### Longitudinal Validation on LUMIERE (real patient scans)
 
@@ -400,7 +393,7 @@ OncoSeg/
 ├── notebooks/
 │   └── OncoSeg_Full_Pipeline.ipynb  # All-in-one Colab notebook
 ├── train_local.py              # Local training script (MPS/CPU)
-├── tests/                      # 46 unit tests (models, losses, modules, RECIST, analysis)
+├── tests/                      # 167 unit tests (models, losses, modules, RECIST, analysis, API)
 ├── pyproject.toml              # Dependencies & project config
 └── README.md
 ```
@@ -414,17 +407,35 @@ OncoSeg/
 | Medical Imaging | MONAI 1.3+ |
 | Configuration | Hydra + OmegaConf |
 | Experiment Tracking | Weights & Biases |
-| Testing | pytest (46 tests) |
+| Testing | pytest (167 tests) |
 | Code Quality | Ruff, mypy |
 
 ## Testing
 
 ```bash
-$ pytest tests/ -v
-======================== 46 passed in 24.16s ========================
+# Install the [all] extra first so the FastAPI/serve tests are collected
+pip install -e ".[all]"
+pytest tests/ -v          # 167 tests collected
 ```
 
-Tests cover: OncoSeg forward pass, deep supervision, all 3 baselines, DiceCE loss, deep supervision loss, cross-attention skip, Swin encoder, UNETR baseline, RECIST measurement (7 edge cases), response classification (5 scenarios), result analysis, failure analysis, figure generation.
+Tests cover: OncoSeg forward pass, deep supervision, all 3 baselines, DiceCE loss, deep supervision loss, cross-attention skip, Swin encoder, UNETR baseline, RECIST measurement, response classification, result analysis, failure analysis, figure generation, and the FastAPI/DICOM endpoints.
+
+> **Note:** CI currently installs only the `[dev]` extra, under which the FastAPI tests fail to collect (`fastapi` lives in the `[serve]` extra). This is being fixed (CI extra + `importorskip` guards). Until then, run the suite locally with `[all]`.
+
+## Limitations
+
+This is an **engineering prototype**, not a validated benchmark or a clinical tool. Honest caveats (some are actively being fixed):
+
+- **Single run, single split.** All numbers come from one 50-epoch run on one MSD train/val split — no repeated seeds, no cross-validation, no confidence intervals. Treat them as indicative, not benchmark-grade.
+- **No statistical superiority over the baseline.** Dice differences vs UNet3D are within noise; no region is significantly better (see Results). The defensible claim is parameter efficiency, not higher accuracy.
+- **Unfair baseline.** The UNet3D baseline was truncated at ~30 epochs by an out-of-memory crash while OncoSeg trained the full 50, so the comparison is not apples-to-apples. It will be re-run under matched settings.
+- **Calibration is poor in the foreground** (foreground ECE ≈ 0.49; over-confident). The MC-Dropout uncertainty is near-degenerate and not yet reliable for triage.
+- **RECIST longest diameter is measured on a single axial slice**, which underestimates elongated/irregular lesions; a 3D cross-slice measurement is being implemented.
+- **The "longitudinal validation" demo is synthetic** (see Results) — real-data validation via `scripts/evaluate_lumiere.py` has not been run.
+- **Trained weights are not in the repo** (gitignored), so the headline numbers cannot currently be reproduced by cloning. Weights will be published as a release once results are re-run.
+- **Baselines (SwinUNETR, UNETR) and the ablation study have not been run** — they require a CUDA GPU.
+- **A region-label (TC/WT/ET) mapping inconsistency** exists in parts of the library code and is being unified; current headline numbers are unaffected, but treat per-region figures from non-canonical scripts with care.
+- **Not for clinical use.**
 
 ## License
 
