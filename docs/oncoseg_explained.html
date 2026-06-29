@@ -1,0 +1,606 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>OncoSeg — Understand the System · Review Findings</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,900&family=Hanken+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Reading-room / bone-paper palette */
+  --paper:#f2ece0; --paper-2:#e9e1d2; --ink:#1c1814; --ink-soft:#4a4239;
+  --line:#cdbfa6; --line-soft:#ddd2bd;
+  --film:#0d0c0f;               /* radiograph film black */
+  --amber:#c0691f; --amber-2:#e08a2e;
+  --teal:#1f6f6a; --teal-2:#2c9a92;
+  --rust:#a23b24; --crimson:#a8321f; --gold:#b08313;
+  --plum:#6a3d6e;
+  --phos:#7CF6C8;
+  --sev-crit:#d23b2a; --sev-high:#c0691f; --sev-med:#b08313; --sev-low:#5a7d4f;
+  --shadow:0 1px 0 rgba(255,255,255,.5), 0 18px 40px -22px rgba(20,16,10,.55);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; background:var(--paper); color:var(--ink); overflow-x:hidden;
+  font-family:"Hanken Grotesk",system-ui,sans-serif; font-size:16.5px; line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+  background-image:
+    radial-gradient(circle at 12% 8%, rgba(192,105,31,.05), transparent 40%),
+    radial-gradient(circle at 88% 92%, rgba(31,111,106,.05), transparent 45%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+}
+a{color:var(--amber);text-decoration:none}
+.wrap{max-width:1120px;margin:0 auto;padding:0 26px}
+
+/* ---------- Top bar ---------- */
+header.top{
+  position:sticky;top:0;z-index:50;
+  background:rgba(242,236,224,.86);backdrop-filter:blur(10px) saturate(1.2);
+  border-bottom:1px solid var(--line);
+}
+.top-inner{display:flex;align-items:center;gap:14px;padding:13px 26px;max-width:1120px;margin:0 auto}
+.brand{font-family:"Fraunces",serif;font-weight:900;font-size:21px;letter-spacing:-.01em;line-height:1;display:flex;align-items:center;gap:11px}
+.brand .glyph{
+  width:30px;height:30px;border-radius:50%;flex:0 0 auto;position:relative;
+  background:radial-gradient(circle at 38% 35%, #2c9a92 0 18%, #14534f 19% 40%, #0d0c0f 41% 100%);
+  box-shadow:inset 0 0 0 2px rgba(255,255,255,.12), 0 0 0 3px rgba(31,111,106,.18);
+}
+.brand .glyph::after{content:"";position:absolute;inset:0;border-radius:50%;
+  background:radial-gradient(circle at 62% 64%, rgba(224,138,46,.9) 0 8%, transparent 9%);}
+.brand small{display:block;font-family:"JetBrains Mono",monospace;font-weight:500;font-size:9.5px;
+  letter-spacing:.22em;text-transform:uppercase;color:var(--ink-soft);margin-top:3px}
+nav.tabs{margin-left:auto;display:flex;gap:6px;background:var(--paper-2);padding:5px;border-radius:13px;border:1px solid var(--line-soft)}
+nav.tabs button{
+  font-family:"JetBrains Mono",monospace;font-weight:500;font-size:12px;letter-spacing:.04em;
+  border:0;background:transparent;color:var(--ink-soft);padding:8px 15px;border-radius:9px;cursor:pointer;
+  transition:.18s;white-space:nowrap;display:flex;align-items:center;gap:7px}
+nav.tabs button .n{opacity:.5;font-weight:700}
+nav.tabs button:hover{color:var(--ink)}
+nav.tabs button.active{background:var(--ink);color:var(--paper);box-shadow:var(--shadow)}
+nav.tabs button.active.flag{background:var(--crimson);color:#fff}
+.lablink{font-family:"JetBrains Mono",monospace;font-weight:700;font-size:12px;letter-spacing:.04em;
+  color:var(--film);background:var(--phos);border:1px solid #57c79e;border-radius:10px;
+  padding:9px 14px;white-space:nowrap;display:flex;align-items:center;gap:8px;transition:.15s;
+  box-shadow:0 0 0 0 rgba(124,246,200,.5)}
+.lablink:hover{box-shadow:0 6px 22px -8px rgba(31,111,106,.7);transform:translateY(-1px)}
+.lablink .sq{width:9px;height:9px;border-radius:2px;background:var(--film)}
+@media(max-width:820px){.top-inner{flex-wrap:wrap}nav.tabs{margin-left:0;order:3}.lablink{margin-left:auto}}
+
+/* ---------- Tab plumbing ---------- */
+.tab{display:none;animation:fade .5s ease both}
+.tab.show{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* ---------- Shared typographic bits ---------- */
+.kicker{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--amber);font-weight:700}
+h1.disp{font-family:"Fraunces",serif;font-weight:900;font-size:clamp(38px,6.6vw,76px);line-height:.96;letter-spacing:-.025em;margin:.28em 0 .2em}
+h2.sec{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(26px,3.6vw,38px);letter-spacing:-.02em;margin:0 0 .15em}
+h3.sub{font-family:"Fraunces",serif;font-weight:600;font-size:22px;letter-spacing:-.01em;margin:0 0 6px}
+.lead{font-size:clamp(17px,2vw,20px);color:var(--ink-soft);max-width:62ch}
+.mono{font-family:"JetBrains Mono",monospace}
+.rule{height:1px;background:linear-gradient(90deg,var(--line),transparent);margin:54px 0}
+
+/* ---------- Cards ---------- */
+.card{background:var(--paper-2);border:1px solid var(--line-soft);border-radius:16px;padding:22px 24px;box-shadow:var(--shadow)}
+.grid{display:grid;gap:18px}
+.grid>*{min-width:0}
+.g2{grid-template-columns:1fr 1fr}
+@media(max-width:860px){.g2{grid-template-columns:1fr}}
+.wrap>section{max-width:100%}
+
+/* ====== TAB 1 — UNDERSTAND ====== */
+.hero{padding:64px 0 18px;position:relative}
+.hero .frame{
+  border:1px solid var(--line);border-radius:20px;padding:38px 40px;background:
+    linear-gradient(180deg, rgba(255,255,255,.35), transparent 60%), var(--paper-2);
+  position:relative;overflow:hidden}
+.hero .frame::before{content:"";position:absolute;right:-60px;top:-60px;width:280px;height:280px;border-radius:50%;
+  background:radial-gradient(circle at 40% 40%, rgba(31,111,106,.16), transparent 60%);filter:blur(6px)}
+.corner{position:absolute;width:16px;height:16px;border:2px solid var(--amber);opacity:.55}
+.corner.tl{top:12px;left:12px;border-right:0;border-bottom:0}
+.corner.tr{top:12px;right:12px;border-left:0;border-bottom:0}
+.corner.bl{bottom:12px;left:12px;border-right:0;border-top:0}
+.corner.br{bottom:12px;right:12px;border-left:0;border-top:0}
+
+.pipeline{display:flex;align-items:stretch;gap:0;flex-wrap:wrap;margin-top:26px}
+.pstep{flex:1 1 0;min-width:150px;padding:16px 16px 18px;border:1px solid var(--line-soft);background:var(--paper);position:relative}
+.pstep:first-child{border-radius:13px 0 0 13px}.pstep:last-child{border-radius:0 13px 13px 0}
+.pstep+.pstep{border-left:0}
+.pstep .ix{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.2em;color:var(--amber);font-weight:700}
+.pstep h4{font-family:"Fraunces",serif;font-size:18px;margin:7px 0 5px}
+.pstep p{font-size:13.5px;color:var(--ink-soft);margin:0;line-height:1.45}
+.pstep .arr{position:absolute;right:-9px;top:50%;transform:translateY(-50%);z-index:2;color:var(--amber);font-size:17px;background:var(--paper);padding:0 1px}
+@media(max-width:860px){.pstep{border-radius:13px!important;border-left:1px solid var(--line-soft)!important}.pstep .arr{display:none}}
+
+.statband{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-top:8px}
+.statband div{padding:18px 16px;border-right:1px solid var(--line-soft);background:var(--paper-2)}
+.statband div:last-child{border-right:0}
+.statband .v{font-family:"Fraunces",serif;font-weight:900;font-size:30px;line-height:1;letter-spacing:-.02em}
+.statband .l{font-size:12px;color:var(--ink-soft);margin-top:6px}
+@media(max-width:860px){.statband{grid-template-columns:1fr 1fr}.statband div:nth-child(2){border-right:0}}
+
+.techgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:12px}
+.chip{border:1px solid var(--line-soft);border-radius:12px;padding:13px 14px;background:var(--paper-2);transition:.18s}
+.chip:hover{transform:translateY(-2px);border-color:var(--amber);box-shadow:var(--shadow)}
+.chip .t{font-weight:700;font-size:14.5px;display:flex;align-items:center;gap:8px}
+.chip .d{font-size:12px;color:var(--ink-soft);margin-top:4px;line-height:1.4}
+.chip .ic{width:9px;height:9px;border-radius:2px}
+
+.layered{display:grid;grid-template-columns:1.1fr .9fr;gap:22px;align-items:start}
+@media(max-width:860px){.layered{grid-template-columns:1fr}}
+.layered .card .mono{overflow-x:auto}
+@media(max-width:540px){.layered .card .mono{font-size:10.5px}}
+ul.clean{list-style:none;padding:0;margin:0}
+ul.clean li{padding:10px 0 10px 26px;border-bottom:1px dashed var(--line-soft);position:relative;font-size:15px}
+ul.clean li::before{content:"";position:absolute;left:2px;top:17px;width:10px;height:10px;border:2px solid var(--teal);border-radius:50%}
+ul.clean li b{font-weight:700}
+.labcta{display:flex;align-items:center;gap:20px;flex-wrap:wrap;border:1px solid var(--teal);border-radius:16px;
+  padding:22px 26px;background:linear-gradient(110deg,rgba(31,111,106,.10),rgba(124,246,200,.05));margin-top:8px}
+.labcta .go{font-family:"JetBrains Mono",monospace;font-weight:700;font-size:14px;color:#fff;background:var(--teal);
+  border-radius:11px;padding:13px 20px;white-space:nowrap;display:inline-flex;gap:9px;align-items:center;transition:.15s}
+.labcta .go:hover{background:var(--teal-2);transform:translateY(-1px)}
+
+/* ====== TAB 2 — FINDINGS ====== */
+.findings-head{padding:54px 0 14px}
+.score{display:flex;gap:14px;flex-wrap:wrap;margin:22px 0 8px}
+.score .pip{border:1px solid var(--line);border-radius:12px;padding:12px 18px;background:var(--paper-2);min-width:110px}
+.score .pip .n{font-family:"Fraunces",serif;font-weight:900;font-size:32px;line-height:1}
+.score .pip .k{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);margin-top:4px}
+.score .pip.crit .n{color:var(--sev-crit)} .score .pip.high .n{color:var(--sev-high)}
+.score .pip.med .n{color:var(--sev-med)} .score .pip.low .n{color:var(--sev-low)}
+
+.filterbar{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0 22px}
+.filterbar button{font-family:"JetBrains Mono",monospace;font-size:12px;border:1px solid var(--line);
+  background:var(--paper-2);color:var(--ink-soft);padding:7px 14px;border-radius:999px;cursor:pointer;transition:.15s}
+.filterbar button:hover{border-color:var(--ink)}
+.filterbar button.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+
+.finding{border:1px solid var(--line-soft);border-left-width:5px;border-radius:12px;background:var(--paper-2);
+  margin-bottom:13px;overflow:hidden;transition:.18s}
+.finding[data-sev="critical"]{border-left-color:var(--sev-crit)}
+.finding[data-sev="high"]{border-left-color:var(--sev-high)}
+.finding[data-sev="medium"]{border-left-color:var(--sev-med)}
+.finding[data-sev="low"]{border-left-color:var(--sev-low)}
+.finding summary{list-style:none;cursor:pointer;padding:15px 20px;display:flex;align-items:flex-start;gap:14px}
+.finding summary::-webkit-details-marker{display:none}
+.finding .sev{font-family:"JetBrains Mono",monospace;font-size:9.5px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;padding:4px 8px;border-radius:6px;color:#fff;flex:0 0 auto;margin-top:2px}
+.sev.critical{background:var(--sev-crit)} .sev.high{background:var(--sev-high)}
+.sev.medium{background:var(--sev-med)} .sev.low{background:var(--sev-low)}
+.finding .ttl{font-weight:700;font-size:15.5px;line-height:1.35}
+.finding .where{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--ink-soft);margin-top:5px;word-break:break-word}
+.finding .chev{margin-left:auto;color:var(--ink-soft);transition:.2s;flex:0 0 auto}
+.finding[open] .chev{transform:rotate(90deg)}
+.finding .body{padding:2px 20px 20px 48px;font-size:14.5px}
+.finding .body .lbl{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--amber);font-weight:700;margin-top:14px;display:block}
+.finding .body .quote{background:var(--film);color:#e9e1d2;border-radius:9px;padding:11px 13px;font-family:"JetBrains Mono",monospace;
+  font-size:12px;line-height:1.55;margin-top:6px;white-space:pre-wrap;word-break:break-word;border:1px solid #2a2620}
+.finding .body .quote .g{color:#7CF6C8}.finding .body .quote .r{color:#ff8a78}.finding .body .quote .y{color:#e0c66a}
+.verdict-pill{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.06em;padding:3px 8px;border-radius:6px;
+  border:1px solid var(--teal);color:var(--teal);background:rgba(31,111,106,.08);margin-top:2px;flex:0 0 auto}
+.method-note{font-size:13px;color:var(--ink-soft);border:1px dashed var(--line);border-radius:10px;padding:12px 15px;background:rgba(255,255,255,.25)}
+
+footer{padding:42px 0 60px;color:var(--ink-soft);font-size:13px;border-top:1px solid var(--line);margin-top:40px}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-inner">
+    <div class="brand">
+      <span class="glyph"></span>
+      <span>OncoSeg<small>3D Tumor Segmentation · Response Assessment</small></span>
+    </div>
+    <nav class="tabs" id="tabnav">
+      <button data-tab="understand" class="active"><span class="n">01</span> Understand</button>
+      <button data-tab="findings"><span class="n">02</span> Review Findings</button>
+    </nav>
+    <a class="lablink" href="oncoseg_cv_lab.html"><span class="sq"></span> Live CV Lab ↗</a>
+  </div>
+</header>
+
+<!-- =========================================================== TAB 1 -->
+<main class="tab show" id="understand">
+  <div class="wrap">
+    <section class="hero">
+      <div class="frame">
+        <span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span>
+        <span class="kicker">What this system is, conceptually</span>
+        <h1 class="disp">Reading a tumor,<br>the way a machine sees it.</h1>
+        <p class="lead">OncoSeg is a deep-learning pipeline that takes a patient's 3D brain-MRI, <b>outlines the tumor voxel-by-voxel</b>, flags <b>where it is unsure</b>, and then turns those outlines into the standard clinical verdict oncologists use to judge whether a treatment is working — <span class="mono">CR / PR / SD / PD</span> under RECIST 1.1.</p>
+        <div class="pipeline" aria-hidden="true">
+          <div class="pstep"><div class="ix">INPUT</div><h4>4-channel MRI</h4><p>T1, T1-contrast, T2, FLAIR stacked as a 3D volume.</p><span class="arr">→</span></div>
+          <div class="pstep"><div class="ix">SEGMENT</div><h4>Swin + CNN U-Net</h4><p>Hybrid transformer/CNN outlines tumor sub-regions.</p><span class="arr">→</span></div>
+          <div class="pstep"><div class="ix">TRUST</div><h4>Uncertainty map</h4><p>MC-Dropout shows where the model hesitates.</p><span class="arr">→</span></div>
+          <div class="pstep"><div class="ix">MEASURE</div><h4>RECIST 1.1</h4><p>Longest diameters → response class over time.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="rule"></div>
+
+    <section class="grid g2" style="align-items:start">
+      <div>
+        <span class="kicker">The clinical problem</span>
+        <h2 class="sec">Why automate this at all?</h2>
+        <p class="lead" style="margin-top:10px">In oncology trials, judging whether a drug works means measuring tumors on scans over time. Done by hand it is <b>slow</b> (15–30 min/scan), <b>subjective</b> (radiologists disagree 20–40% on the boundary), and historically reduced to a single 2D diameter. OncoSeg's premise: do the measurement in full 3D, reproducibly, and carry an explicit confidence signal alongside it.</p>
+      </div>
+      <div class="card">
+        <span class="kicker">At a glance</span>
+        <div class="statband" style="margin-top:14px">
+          <div><div class="v">4</div><div class="l">MRI modalities in</div></div>
+          <div><div class="v">3</div><div class="l">tumor regions out (TC·WT·ET)</div></div>
+          <div><div class="v">~3.7M</div><div class="l">params (headline model)*</div></div>
+          <div><div class="v">CR·PR<br>SD·PD</div><div class="l">RECIST verdict</div></div>
+        </div>
+        <p style="font-size:12px;color:var(--ink-soft);margin:12px 2px 0">*Several documents disagree on this number — see <a href="#" data-goto="findings">Review Findings</a>. This page describes the system as <i>designed &amp; documented</i>; tab 2 separates that from what the artifacts actually support.</p>
+      </div>
+    </section>
+
+    <div class="rule"></div>
+
+    <section>
+      <span class="kicker">The architecture, in plain terms</span>
+      <h2 class="sec">A hybrid: global eyes, local hands</h2>
+      <p class="lead" style="margin-top:8px;margin-bottom:22px">Two ideas are fused. A <b>Swin Transformer encoder</b> looks at the whole volume and reasons about long-range context ("is this blob part of the same tumor as that one?"). A <b>CNN decoder</b> rebuilds crisp, local voxel boundaries. Between them, <b>cross-attention skip connections</b> let the decoder <i>ask</i> the encoder for exactly the features it needs — instead of blindly concatenating them.</p>
+      <div class="layered">
+        <div class="card">
+          <h3 class="sub">The five moving parts</h3>
+          <ul class="clean">
+            <li><b>Swin encoder</b> — hierarchical windowed self-attention over the 3D volume; 4 stages at ¼→1/32 resolution, channels 48→96→192→384.</li>
+            <li><b>Cross-attention skips</b> — decoder features are <i>queries</i>; encoder features are <i>keys/values</i>. The decoder selectively pulls relevant context across the U.</li>
+            <li><b>CNN decoder</b> — transposed-conv upsampling restores full resolution and sharp edges.</li>
+            <li><b>Deep supervision</b> — auxiliary heads at each decoder scale add loss signal, stabilizing training and helping small lesions.</li>
+            <li><b>MC-Dropout</b> — dropout left on at inference; multiple passes give a per-voxel uncertainty/entropy map.</li>
+            <li><b>Temporal attention</b> (optional) — fuses baseline vs follow-up bottlenecks to capture change directly.</li>
+          </ul>
+        </div>
+        <div class="card" style="background:var(--film);color:#e9e1d2">
+          <div class="mono" style="font-size:12.5px;line-height:1.85;color:#cfeee2">
+<span style="color:#7CF6C8">INPUT</span>  [B, 4, 128³]  T1·T1c·T2·FLAIR
+   │
+   ▼   <span style="color:#e0c66a">— Swin encoder (global ↓) —</span>
+  s1 48ch  H/4     ┐
+  s2 96ch  H/8     │ multi-scale
+  s3 192ch H/16    │ features
+  s4 384ch H/32    ┘ (bottleneck)
+   │
+   │   <span style="color:#e08a2e">cross-attention skip ↔</span>
+   ▼   <span style="color:#7CF6C8">— CNN decoder (local ↑) —</span>
+  up → up → up → 4× head
+   │   <span style="color:#e0c66a">+ deep supervision @ each scale</span>
+   ▼
+<span style="color:#7CF6C8">OUTPUT</span> [B, 3, 128³]  sigmoid
+   ├─ TC · WT · ET masks
+   ├─ uncertainty (MC-Dropout entropy)
+   └─ RECIST → CR/PR/SD/PD
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="rule"></div>
+
+    <section>
+      <span class="kicker">The technology stack</span>
+      <h2 class="sec">What it's built from</h2>
+      <p class="lead" style="margin:8px 0 20px">Every concept below gets an <b>interactive, intuitive explanation</b> in the <a href="oncoseg_cv_lab.html">Live CV Lab ↗</a></p>
+      <div class="techgrid">
+        <div class="chip"><div class="t"><span class="ic" style="background:var(--plum)"></span>Swin Transformer</div><div class="d">Windowed + shifted self-attention; linear-cost global context for 3D volumes.</div></div>
+        <div class="chip"><div class="t"><span class="ic" style="background:var(--amber)"></span>Cross-Attention</div><div class="d">Decoder queries encoder. Q·Kᵀ → softmax → weighted V.</div></div>
+        <div class="chip"><div class="t"><span class="ic" style="background:var(--teal)"></span>CNN Decoder</div><div class="d">Transposed convolutions rebuild voxel-level detail.</div></div>
+        <div class="chip"><div class="t"><span class="ic" style="background:var(--gold)"></span>MC-Dropout</div><div class="d">Dropout at inference → Bayesian-ish uncertainty.</div></div>
+        <div class="chip"><div class="t"><span class="ic" style="background:var(--crimson)"></span>Dice / Focal loss</div><div class="d">Overlap-based loss for tiny, imbalanced tumor masks.</div></div>
+        <div class="chip"><div class="t"><span class="ic" style="background:var(--teal-2)"></span>Calibration / ECE</div><div class="d">Do predicted probabilities match observed accuracy?</div></div>
+        <div class="chip"><div class="t"><span class="ic" style="background:var(--rust)"></span>RECIST 1.1</div><div class="d">Longest-diameter rules → treatment-response class.</div></div>
+        <div class="chip"><div class="t"><span class="ic" style="background:var(--plum)"></span>PyTorch · MONAI</div><div class="d">3D medical-imaging DL framework + transforms.</div></div>
+        <div class="chip"><div class="t"><span class="ic" style="background:var(--amber-2)"></span>Hydra · FastAPI</div><div class="d">Config management + REST inference service.</div></div>
+      </div>
+    </section>
+
+    <div class="rule"></div>
+
+    <section class="labcta">
+      <div style="flex:1 1 320px">
+        <span class="kicker" style="color:var(--teal)">Go deeper</span>
+        <h3 class="sub" style="margin-top:6px">Touch the architecture — 22 live, playable widgets</h3>
+        <p style="margin:6px 0 0;color:var(--ink-soft)">The <b>Live CV Lab</b> is now its own page: convolution, attention, Swin windows, MC-Dropout, Dice, calibration/ECE, RECIST and more — each runs the real math in your browser, with a per-widget ▶ Play and a global auto-tour.</p>
+      </div>
+      <a class="go" href="oncoseg_cv_lab.html">Open the Live CV Lab ↗</a>
+    </section>
+
+    <div class="rule"></div>
+    <section class="card" style="border-color:var(--amber);background:linear-gradient(180deg,rgba(192,105,31,.06),transparent)">
+      <span class="kicker">Honest framing</span>
+      <h3 class="sub" style="margin-top:6px">This tab is the system as intended. Tab 2 is the system as verified.</h3>
+      <p style="margin:6px 0 0;color:var(--ink-soft)">A deep, adversarially-verified code &amp; data review found the engineering is solid but several headline <i>scientific</i> claims don't hold up against the committed artifacts. We keep the two views separate on purpose. <a href="#" data-goto="findings"><b>Read the findings →</b></a></p>
+    </section>
+  </div>
+  <footer><div class="wrap">OncoSeg · conceptual overview. The interactive Live CV Lab lives on its <a href="oncoseg_cv_lab.html">own page</a>. No data leaves your browser.</div></footer>
+</main>
+
+<!-- =========================================================== TAB 2 -->
+<main class="tab" id="findings">
+  <div class="wrap">
+    <section class="findings-head">
+      <span class="kicker" style="color:var(--crimson)">Deep review · adversarially verified</span>
+      <h1 class="disp">What holds up —<br>and what doesn't.</h1>
+      <p class="lead">An 80-agent review mapped every subsystem, hunted issues across five dimensions, and had an independent verifier try to <i>refute</i> each finding at the file&amp;line level. <b>65 findings survived verification</b> (52 confirmed, 13 partially-confirmed, 0 refuted). The three most damaging were re-checked by hand. Below is the curated, severity-ordered list.</p>
+      <div class="score">
+        <div class="pip crit"><div class="n">2</div><div class="k">Critical</div></div>
+        <div class="pip high"><div class="n">14</div><div class="k">High</div></div>
+        <div class="pip med"><div class="n">9</div><div class="k">Medium</div></div>
+        <div class="pip low"><div class="n">6</div><div class="k">Low (sample)</div></div>
+      </div>
+      <p class="method-note">Reproduction note: lint passes clean (<span class="mono">ruff</span> ✓) and 56 dependency-light tests pass, but the full suite needs <span class="mono">monai[all]</span>; the headline checkpoints are absent from the repo, so several results cannot be regenerated as shipped. Findings are evidence-backed regardless of environment.</p>
+    </section>
+
+    <div class="filterbar" id="filterbar">
+      <button data-f="all" class="on">All</button>
+      <button data-f="critical">Critical</button>
+      <button data-f="high">High</button>
+      <button data-f="medium">Medium</button>
+      <button data-f="low">Low</button>
+    </div>
+
+    <div id="findlist"><!-- injected --></div>
+
+    <div class="rule"></div>
+    <section class="card">
+      <span class="kicker" style="color:var(--crimson)">Bottom line</span>
+      <h3 class="sub" style="margin-top:6px">Strong engineering scaffold, unreliable scientific claims.</h3>
+      <p style="color:var(--ink-soft);margin-top:6px">Code quality, CI, Docker/API, and DICOM I/O are genuinely good. But the two flagship results — "<b>OncoSeg significantly outperforms UNet3D</b>" and "<b>the model is well-calibrated</b>" — are not supported by the committed data, and on close inspection point the <i>opposite</i> way. Highest-leverage fixes: remove/correct the Wilcoxon claim, report foreground-only ECE, fix the TC/WT/ET label permutation, repair the RECIST longest-diameter bug, and reconcile the duplicate-number documentation.</p>
+    </section>
+  </div>
+  <footer><div class="wrap">Findings are reproducible from the repository's committed artifacts (per-subject Dice <span class="mono">.npy</span>, eval JSON) and source at the cited <span class="mono">file:line</span> anchors.</div></footer>
+</main>
+
+<script>
+/* ============================== TAB ROUTER ============================== */
+const tabs=document.querySelectorAll('#tabnav button');
+const panels={understand:document.getElementById('understand'),findings:document.getElementById('findings')};
+function showTab(id){
+  for(const k in panels){panels[k].classList.toggle('show',k===id);}
+  tabs.forEach(b=>{
+    const on=b.dataset.tab===id;
+    b.classList.toggle('active',on);
+    b.classList.toggle('flag', b.dataset.tab==='findings');
+  });
+  window.scrollTo({top:0,behavior:'instant'});
+  if(id==='findings') buildFindings();
+}
+tabs.forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
+document.querySelectorAll('[data-goto]').forEach(a=>a.addEventListener('click',e=>{e.preventDefault();showTab(a.dataset.goto);}));
+
+/* ============================== FINDINGS DATA ============================== */
+const FINDINGS=[
+ {sev:'critical',title:'Statistical-significance claim is false — and points the wrong way',
+  where:'README.md:139,142 · docs/Paper_Results_Draft.md:11,14,82',
+  verdict:'confirmed · re-checked by hand',
+  claim:'README marks WT Dice 0.8529 with "* p < 0.01 (Wilcoxon signed-rank test)".',
+  reality:'Re-running the project\'s own pre-registered one-sided Wilcoxon on the committed per-subject arrays gives NO region near significance — and on the asterisked region UNet3D is actually favored.',
+  quote:'TC: delta=+0.0049  p(greater)=<span class="y">0.456</span>\nWT: delta=+0.0007  p(greater)=<span class="r">0.9954</span>  (UNet3D wins 67/96)\nET: delta=+0.0019  p(greater)=<span class="y">0.574</span>\nMEAN:             p(greater)=<span class="y">0.408</span>\n→ no committed code path produces p<0.01',
+  impact:'The single inferential-statistics claim in the paper/README is unsupported and inverted. Any reviewer recomputing it would reject the comparison.'},
+ {sev:'critical',title:'"Well-calibrated (ECE=0.0101)" is an artifact of 98% background voxels',
+  where:'README.md:170 · scripts/uncertainty_qualitative_analysis.py:123-143',
+  verdict:'confirmed',
+  claim:'Model advertised as well-calibrated (ECE = 0.0101), suitable for radiologist triage.',
+  reality:'The ECE pools all 3 channels + every background voxel. The lowest-confidence bin holds 98.38% of voxels. Exclude background and foreground ECE ≈ 0.49 — 49× worse — and the top-confidence bin is only 39.6% accurate.',
+  quote:'bin0 (conf 0.0001): count 7,888,372 = <span class="r">98.38%</span> of voxels\ntop bin (conf 0.9946): accuracy = <span class="r">39.6%</span>\nforeground-only ECE = <span class="r">0.494</span>  (vs reported 0.0101)\n+ derived from ONE subject, 5 MC samples, variance 2.7e-6',
+  impact:'The clinical-calibration claim is inverted: the model is severely over-confident exactly on tumor voxels — the most clinically dangerous misrepresentation in the repo.'},
+ {sev:'high',title:'Two different OncoSeg networks share one name; the trained one isn\'t the documented one',
+  where:'train_all.py:159-242 vs src/models/oncoseg.py · configs/model/oncoseg.yaml:8',
+  verdict:'confirmed',
+  claim:'README diagram, config, and src module describe depths (2,2,6,2), 3 cross-attention skips, separate 4× head.',
+  reality:'Checkpoints were produced by an INLINE class in train_all.py with depths (2,2,2,2), 2 skips, a single fused head, and per-forward dropout. The documented architecture was never trained.',
+  impact:'The architecture shown to readers does not match the one that produced the numbers; configs/diagram are aspirational.'},
+ {sev:'high',title:'Inference MC-Dropout path crashes on the only model ever trained',
+  where:'src/inference.py:154-172 · src/api/service.py:236,258',
+  verdict:'confirmed',
+  claim:'README headline feature: "Uncertainty-Aware Segmentation via MC Dropout"; API exposes it.',
+  reality:'_estimate_uncertainty calls self.model.decoder and self.model.cross_attn_skips, but the deployed inline model (default model_source="train_all") has only self.decoders — AttributeError 500 on any mc_samples>0 request.',
+  quote:'inference.py:162  dec_out = self.model.<span class="r">decoder</span>(...)\ntrain_all.py:184  self.<span class="g">decoders</span> = nn.ModuleList([...])  # plural!\n→ grep "self.decoder[^s]" train_all.py → nothing',
+  impact:'The flagship uncertainty feature is non-functional on the trained architecture; paper numbers came from a separate script, not this path.'},
+ {sev:'high',title:'TC / WT / ET region labels are permuted relative to the data',
+  where:'src/evaluation/metrics.py:28 · result_analyzer.py:23 · trainer.py:159-161',
+  verdict:'confirmed · re-checked by hand',
+  claim:'Per-region Dice/HD95 reported as TC, WT, ET.',
+  reality:'Data channel order is [TC,WT,ET] (torch.stack([tc,wt,et])), but REGION_NAMES=["ET","TC","WT"] and trainer maps dice_scores[0]→dice_et. A third file uses yet another order [WT,TC,ET].',
+  quote:'data:    stack([<span class="g">tc, wt, et</span>])      # train_all.py:74\nmetrics: REGION_NAMES = [<span class="r">"ET","TC","WT"</span>]  # :28\ntrainer: scores[0]→<span class="r">dice_et</span>, [1]→dice_tc  # :159',
+  impact:'Every per-region label produced via these modules is wrong; dice_mean (and thus checkpoint selection) is unaffected, but per-region winners and per-region significance are mislabeled.'},
+ {sev:'high',title:'RECIST longest diameter measured only on the max-AREA slice',
+  where:'src/response/recist.py:44-67',
+  verdict:'confirmed',
+  claim:'Computes RECIST 1.1 longest diameter of each lesion.',
+  reality:'Picks argmax(slice_areas) and measures Feret diameter on that one slice. A lesion whose longest extent lies on a smaller-area slice is silently under-measured (phantom: returns 7mm, true answer 33mm).',
+  impact:'Sum-of-longest-diameters can be systematically underestimated, biasing % change and potentially flipping CR/PR/SD/PD — corrupting the clinical endpoint the whole project produces.'},
+ {sev:'high',title:'NaN poisons the published failure-mode conclusion',
+  where:'uncertainty_qualitative_analysis.py:212 · failure_analysis.json',
+  verdict:'confirmed',
+  claim:'"Dominant failure region = TC (relative drop 79.7%)" presented as a clinically coherent finding.',
+  reality:'plain .mean() (not nanmean) makes ET overall_mean = NaN, which max() silently drops. ET\'s bottom-5 Dice (0.117) is actually LOWER than TC\'s (0.161) — so ET is arguably the worse region. The conclusion is a NaN artifact.',
+  impact:'A headline failure-mode narrative is a numerical artifact drawn from corrupted inputs.'},
+ {sev:'high',title:'Best-checkpoint selection has no NaN guard',
+  where:'trainer.py:162,169 · train_all.py:463,473 · train_local.py:169',
+  verdict:'confirmed',
+  claim:'Saves the best checkpoint by mean validation Dice.',
+  reality:'DiceMetric default ignore_empty=True → empty-GT region (ET is commonly empty) = NaN. dice_scores.mean()=NaN, and NaN>best_dice is always False → no best.pth ever saved. The val data already contains an empty-ET subject.',
+  impact:'A single empty region can silently disable checkpoint saving for an entire run.'},
+ {sev:'high',title:'Library deep-supervision loss is shape-broken at configured depths',
+  where:'src/training/losses.py:64-91 · trainer.py:111',
+  verdict:'confirmed',
+  claim:'`python -m src.training.trainer` is a documented training entrypoint.',
+  reality:'DeepSupervisionLoss never interpolates; H/4 DS logits (32³) are compared against full-res labels (128³) → ValueError/RuntimeError. Only the inline train_all path interpolates and survives.',
+  impact:'The documented Hydra training command is broken; the docstring claims interpolation that the code does not do.'},
+ {sev:'high',title:'Headline results cannot be regenerated — no checkpoints in repo',
+  where:'PROJECT_OVERVIEW.md:7,176 · README.md:323,337 · Dockerfile:8',
+  verdict:'confirmed · re-checked by hand',
+  claim:'"Trained artefacts on disk: oncoseg_best.pth, unet3d_best.pth."',
+  reality:'find . -name "*.pth" and git ls-files both return nothing. The directory holds only eval JSON, .npy and PNGs. Every serve/eval/LUMIERE command points at an absent file.',
+  quote:'experiments/local_results/  →  *.json, *.npy, *.png\n                            →  <span class="r">NO .pth checkpoints</span>\n.gitignore: *.pth ignored, no git-lfs',
+  impact:'The 0.7969 Dice and the entire serving/inference path are non-reproducible as shipped.'},
+ {sev:'high',title:'Effect size is negligible but framed as "outperforms on all metrics"',
+  where:'README.md:29,139-144 · PROJECT_OVERVIEW.md:90',
+  verdict:'confirmed',
+  claim:'"OncoSeg outperforms UNet3D on all metrics across all 3 regions."',
+  reality:'Mean Dice gap is +0.0025 (WT +0.0007) — within noise; the rank test on WT favors UNet3D. The repo\'s own interview notes contradict the README.',
+  impact:'Over-claims a tie as a clean win.'},
+ {sev:'high',title:'Single run, no seeds, no confidence intervals',
+  where:'docs/Paper_Results_Draft.md:3 · trainer.py (no manual_seed)',
+  verdict:'confirmed',
+  claim:'Accuracy numbers presented as model properties.',
+  reality:'All numbers come from one 50-epoch run; two of three training drivers set no seed and have no resume.',
+  impact:'No way to distinguish signal from run-to-run noise.'},
+ {sev:'high',title:'Unfair comparison: 50 epochs vs ~30 epochs (OOM-killed)',
+  where:'PROJECT_OVERVIEW.md:86-91',
+  verdict:'confirmed',
+  claim:'Head-to-head OncoSeg vs UNet3D.',
+  reality:'OncoSeg trained 50 epochs; UNet3D was killed by Colab OOM at ~30 — then presented as a clean win.',
+  impact:'The baseline was under-trained relative to the proposed model.'},
+ {sev:'high',title:'"Longitudinal validation" is a fixed-seed simulation',
+  where:'README.md:175-193 · recist_response_demo.ipynb',
+  verdict:'confirmed',
+  claim:'"Verified" CR/PR/SD/PD table under "Realistic longitudinal" header.',
+  reality:'All four follow-ups are synthetic perturbations of ONE baseline (BRATS_407, seed=42), tuned to cross thresholds the classifier itself implements — circular. The real LUMIERE path exists but was never run.',
+  impact:'A reader infers real-patient validation of the clinical endpoint; none exists.'},
+ {sev:'high',title:'CI installs ".[dev]" — the 16 API tests error at collection',
+  where:'.github/workflows/ci.yml:35 · pyproject.toml:60-78 · tests/test_api.py:17',
+  verdict:'confirmed',
+  claim:'README: "service tested end-to-end (16 tests)"; badge "46 passed".',
+  reality:'fastapi lives only in the "serve" extra; CI installs "dev"; test_api hard-imports fastapi with no importorskip → collection error, so the API surface is never exercised in CI.',
+  impact:'A broken endpoint would not fail CI; the advertised pass count is unattainable under the documented command.'},
+ {sev:'high',title:'Inference uncertainty uses categorical entropy on sigmoid outputs',
+  where:'src/inference.py:170 · src/models/oncoseg.py:199',
+  verdict:'confirmed',
+  claim:'MC-Dropout entropy as the uncertainty map.',
+  reality:'Model is multi-label sigmoid (TC/WT/ET overlap, don\'t sum to 1), but entropy is computed as -Σ p·log p (categorical). The analysis script uses correct per-channel binary entropy — the two disagree.',
+  impact:'The live service returns a mathematically invalid uncertainty quantity, different from the paper\'s.'},
+ {sev:'medium',title:'Parameter counts contradict each other across docs',
+  where:'README.md:86 vs Interview_Questions.md:83 vs Paper_Methods_Draft.md:159',
+  verdict:'confirmed',
+  claim:'OncoSeg = 3.7M / 14.0M params.',
+  reality:'Same model is quoted as 3.7M and 2.9M (embed=24); embed=48 as 14.0M, 12.1M, and ~12M. The 14M variant was never trained.',
+  impact:'No single trustworthy parameter count; the comparison\'s central selling point is ambiguous.'},
+ {sev:'medium',title:'Test count: 46 (README) vs 142 (overview) vs 75 actual',
+  where:'README.md:8,403 · PROJECT_OVERVIEW.md:6 · pytest --collect-only',
+  verdict:'confirmed',
+  claim:'README badge "46 tests passed" with a pasted pytest transcript.',
+  reality:'PROJECT_OVERVIEW says 142; actual collection = 75 tests / 160 test functions. The transcript is stale/fabricated.',
+  impact:'The documented test inventory is not a trustworthy coverage map.'},
+ {sev:'medium',title:'Untrained SwinUNETR / UNETR rows imply a comparison that never happened',
+  where:'README.md:82-91,235-246',
+  verdict:'confirmed',
+  claim:'"Competitive with 6× fewer params than UNETR / 5× fewer than SwinUNETR."',
+  reality:'Those baselines were never trained or evaluated (README itself: "not yet filled in"), yet param-ratio comparisons are presented as results.',
+  impact:'Comparative claims rest on models that produced no numbers.'},
+ {sev:'medium',title:'HD95 "significant on WT" — but no per-subject HD95 data exists',
+  where:'docs/Paper_Results_Draft.md:14,82 · evaluate_checkpoint.py:130',
+  verdict:'confirmed',
+  claim:'HD95 improvement statistically significant on WT.',
+  reality:'The significance test is on Dice; no per-subject HD95 array is stored, so an HD95 significance test cannot have been run.',
+  impact:'A significance claim with no underlying data.'},
+ {sev:'medium',title:'Committed result JSON contains bare NaN (invalid JSON)',
+  where:'oncoseg_eval.json · failure_analysis.json',
+  verdict:'confirmed',
+  claim:'Clean eval artifacts (ET Dice 0.7481, etc.).',
+  reality:'eval_std_et: NaN and ET overall_mean/drop: NaN are literal NaN tokens — invalid JSON that breaks standard parsers, including the project\'s own GitHub Pages JS.',
+  impact:'Artifacts can\'t be consumed by strict parsers; ET stats reported as clean are undefined.'},
+ {sev:'medium',title:'Production evaluator has zero tests',
+  where:'evaluate_checkpoint.py · src/evaluation/metrics.py · evaluator.py',
+  verdict:'confirmed',
+  claim:'Evaluation is the source of all reported numbers.',
+  reality:'Neither the script that produced the results nor the library evaluator has any test; the region-permutation and NaN bugs are therefore uncaught.',
+  impact:'The most consequential code has the least coverage.'},
+ {sev:'medium',title:'Model tests assert 4 output channels; the pipeline is 3-channel',
+  where:'tests/test_models.py:16,29 · configs/model/oncoseg.yaml:5',
+  verdict:'confirmed',
+  claim:'Tests validate the model.',
+  reality:'Tests assert num_classes=4 (softmax-era), but the entire trained pipeline is 3-channel sigmoid [TC,WT,ET]. Tests validate a configuration that isn\'t used.',
+  impact:'Green tests don\'t reflect the trained model.'},
+ {sev:'medium',title:'Calibration / ECE claim has zero test coverage',
+  where:'uncertainty_qualitative_analysis.py:123 · tests/',
+  verdict:'confirmed',
+  claim:'"Well-calibrated (ECE=0.0101)".',
+  reality:'No test exercises the ECE computation or the foreground/background weighting that makes it misleading.',
+  impact:'The most-cited scientific claim is entirely unguarded.'},
+ {sev:'medium',title:'Deep-supervision weighting is never verified',
+  where:'tests/test_losses.py:60-90 · losses.py:79-90',
+  verdict:'confirmed',
+  claim:'Deep supervision uses decreasing per-scale weights.',
+  reality:'Tests assert only "positive scalar" — never the decreasing-weight scheme that defines deep supervision; and the two training entrypoints apply different outer DS multipliers (1.0 vs 0.5).',
+  impact:'A headline contribution\'s core behavior is untested and inconsistent.'},
+ {sev:'low',title:'Parameter-reduction factor stated as 5×, 5.2×, and 6×',
+  where:'README.md:29,91 vs Paper_Methods_Draft.md:199',
+  verdict:'partially-confirmed',
+  claim:'"5× fewer parameters."',
+  reality:'Stated as 5×, 5.2×, and 6× across docs/pages for the same comparison.',
+  impact:'Minor but compounds the overall numerical inconsistency.'},
+ {sev:'low',title:'UNETR param count: 130.8M vs 130.4M within one draft',
+  where:'docs/Paper_Methods_Draft.md:162 vs :201',
+  verdict:'confirmed',
+  claim:'UNETR = 130.8M.',
+  reality:'Same draft also says 130.4M.',
+  impact:'Internal inconsistency in a single document.'},
+ {sev:'low',title:'Train/val split: 388/96 vs 387/97',
+  where:'README.md:146 vs Paper_Methods_Draft.md:127',
+  verdict:'confirmed',
+  claim:'388 train / 96 val.',
+  reality:'Paper Methods says 387/97; both are 80/20 of 484 but differ.',
+  impact:'Dataset bookkeeping disagrees across docs.'},
+ {sev:'low',title:'Config/src default depths (2,2,6,2) ≠ trained (2,2,2,2)',
+  where:'configs/model/oncoseg.yaml:8 · src/models/oncoseg.py:30 vs train_all.py:163',
+  verdict:'confirmed',
+  claim:'Config reflects the model.',
+  reality:'Default config and src module use depth-6 stage 3; the trained inline model used depth 2.',
+  impact:'Re-running from config builds a different network than the one benchmarked.'},
+ {sev:'low',title:'Epoch count: 50 (run) vs 100 (paper scheduler) vs 300 (config)',
+  where:'PROJECT_OVERVIEW.md:85 · Paper_Methods_Draft.md:149 · configs/config.yaml:7',
+  verdict:'partially-confirmed',
+  claim:'Trained for 50 epochs.',
+  reality:'Paper Methods describes a 100-epoch cosine schedule; config default is 300.',
+  impact:'Training protocol is documented three different ways.'},
+ {sev:'low',title:'No graceful skip for optional deps — partial installs error',
+  where:'tests/ (no importorskip/skipif)',
+  verdict:'confirmed',
+  claim:'Tests run anywhere.',
+  reality:'Zero importorskip/skipif; missing monai/fastapi/nibabel turn into hard collection errors that mask the true pass set.',
+  impact:'Green runs require an exact env the documented commands don\'t guarantee.'},
+];
+
+let curFilter='all';
+function buildFindings(){
+  const list=document.getElementById('findlist');
+  if(list.dataset.built && list.dataset.filter===curFilter) return;
+  list.dataset.built='1'; list.dataset.filter=curFilter;
+  const items=FINDINGS.filter(f=>curFilter==='all'||f.sev===curFilter);
+  list.innerHTML=items.map(f=>`
+    <details class="finding" data-sev="${f.sev}">
+      <summary>
+        <span class="sev ${f.sev}">${f.sev}</span>
+        <span>
+          <span class="ttl">${f.title}</span>
+          <span class="where">${f.where}</span>
+        </span>
+        <span class="verdict-pill">${f.verdict}</span>
+        <span class="chev">▸</span>
+      </summary>
+      <div class="body">
+        <span class="lbl">Claim</span><div>${f.claim}</div>
+        <span class="lbl">Reality</span><div>${f.reality}</div>
+        ${f.quote?`<span class="lbl">Evidence</span><div class="quote">${f.quote}</div>`:''}
+        <span class="lbl">Why it matters</span><div>${f.impact}</div>
+      </div>
+    </details>`).join('');
+}
+document.getElementById('filterbar').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b)return;
+  curFilter=b.dataset.f;
+  document.querySelectorAll('#filterbar button').forEach(x=>x.classList.toggle('on',x===b));
+  buildFindings();
+});
+</script>
+</body>
+</html>
